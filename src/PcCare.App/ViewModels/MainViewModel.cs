@@ -16,13 +16,16 @@ public sealed class MainViewModel : ObservableObject
     private readonly CleanupCoordinator _cleanupCoordinator;
     private readonly ReportWriter _reportWriter;
     private readonly OutputDirectoryResolver _outputDirectoryResolver;
+    private readonly VisualEffectsService _visualEffectsService;
     private readonly IDialogService _dialogService;
     private CancellationTokenSource? _operationCancellation;
     private ScanReport? _report;
     private CleanupExecutionResult? _lastCleanup;
     private SystemSnapshot? _system;
     private bool _isBusy;
+    private bool _hasVisualEffectsBackup;
     private string _statusText = "准备就绪。点击“开始体检”进行只读扫描。";
+    private string _visualEffectsStatus;
 
     public MainViewModel(
         SystemInfoService systemInfoService,
@@ -32,6 +35,7 @@ public sealed class MainViewModel : ObservableObject
         CleanupCoordinator cleanupCoordinator,
         ReportWriter reportWriter,
         OutputDirectoryResolver outputDirectoryResolver,
+        VisualEffectsService visualEffectsService,
         IDialogService dialogService)
     {
         _systemInfoService = systemInfoService;
@@ -41,11 +45,20 @@ public sealed class MainViewModel : ObservableObject
         _cleanupCoordinator = cleanupCoordinator;
         _reportWriter = reportWriter;
         _outputDirectoryResolver = outputDirectoryResolver;
+        _visualEffectsService = visualEffectsService;
         _dialogService = dialogService;
+        _hasVisualEffectsBackup = visualEffectsService.HasBackup;
+        _visualEffectsStatus = _hasVisualEffectsBackup
+            ? "已保存修改前配置，可随时恢复。"
+            : "尚未应用视觉效果性能模式。";
 
         ScanCommand = new AsyncRelayCommand(ScanAsync, () => !IsBusy);
         CleanCommand = new AsyncRelayCommand(CleanAsync, () => !IsBusy && _report is not null);
         ExportCommand = new AsyncRelayCommand(ExportAsync, () => !IsBusy && _report is not null);
+        OptimizeVisualEffectsCommand = new AsyncRelayCommand(OptimizeVisualEffectsAsync, () => !IsBusy);
+        RestoreVisualEffectsCommand = new AsyncRelayCommand(
+            RestoreVisualEffectsAsync,
+            () => !IsBusy && _hasVisualEffectsBackup);
         CancelCommand = new RelayCommand(Cancel, () => IsBusy);
     }
 
@@ -58,6 +71,10 @@ public sealed class MainViewModel : ObservableObject
     public AsyncRelayCommand CleanCommand { get; }
 
     public AsyncRelayCommand ExportCommand { get; }
+
+    public AsyncRelayCommand OptimizeVisualEffectsCommand { get; }
+
+    public AsyncRelayCommand RestoreVisualEffectsCommand { get; }
 
     public RelayCommand CancelCommand { get; }
 
@@ -77,6 +94,12 @@ public sealed class MainViewModel : ObservableObject
     {
         get => _statusText;
         private set => SetProperty(ref _statusText, value);
+    }
+
+    public string VisualEffectsStatus
+    {
+        get => _visualEffectsStatus;
+        private set => SetProperty(ref _visualEffectsStatus, value);
     }
 
     public string ComputerName => _system?.ComputerName ?? "尚未体检";
@@ -128,7 +151,7 @@ public sealed class MainViewModel : ObservableObject
                 CleanupCategories = cleanupResults,
                 StartupEntries = startupEntries,
                 LastCleanup = _lastCleanup,
-                ApplicationVersion = typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "0.1.0"
+                ApplicationVersion = typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "0.2.0"
             };
 
             ReplaceCollections(cleanupResults, startupEntries);
@@ -240,6 +263,74 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
+    private async Task OptimizeVisualEffectsAsync()
+    {
+        if (!_dialogService.Confirm(
+                "将关闭当前用户的窗口动画、淡入淡出、阴影、任务栏动画、Peek、缩略图预览等视觉效果，仅保留字体平滑。\n\n修改前配置会保存在本机，可一键恢复。部分效果可能需要重新登录后完全生效，是否继续？",
+                "确认应用视觉效果性能模式"))
+        {
+            return;
+        }
+
+        BeginOperation("正在调整视觉效果……");
+        try
+        {
+            await _visualEffectsService.ApplyPerformanceProfileAsync(_operationCancellation!.Token);
+            _hasVisualEffectsBackup = true;
+            VisualEffectsStatus = "性能模式已应用：仅保留字体平滑；修改前配置已备份。";
+            StatusText = "视觉效果性能模式已应用。";
+            _dialogService.ShowInfo(
+                "调整完成。字体平滑保持开启，其他视觉效果已关闭。部分程序或任务栏效果可能在重新登录后完全生效。",
+                "性能优化完成");
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText = "视觉效果调整已取消。";
+        }
+        catch (Exception exception)
+        {
+            StatusText = "视觉效果调整失败。";
+            _dialogService.ShowError(exception.Message, "调整失败");
+        }
+        finally
+        {
+            EndOperation();
+        }
+    }
+
+    private async Task RestoreVisualEffectsAsync()
+    {
+        if (!_dialogService.Confirm(
+                "将恢复应用性能模式之前保存的视觉效果配置。部分效果可能需要重新登录后完全生效，是否继续？",
+                "确认恢复视觉效果"))
+        {
+            return;
+        }
+
+        BeginOperation("正在恢复视觉效果……");
+        try
+        {
+            await _visualEffectsService.RestoreAsync(_operationCancellation!.Token);
+            _hasVisualEffectsBackup = false;
+            VisualEffectsStatus = "已恢复修改前的视觉效果配置。";
+            StatusText = "视觉效果已恢复。";
+            _dialogService.ShowInfo("已恢复修改前配置。部分程序或任务栏效果可能在重新登录后完全生效。", "恢复完成");
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText = "视觉效果恢复已取消。";
+        }
+        catch (Exception exception)
+        {
+            StatusText = "视觉效果恢复失败。";
+            _dialogService.ShowError(exception.Message, "恢复失败");
+        }
+        finally
+        {
+            EndOperation();
+        }
+    }
+
     private void ReplaceCollections(
         IEnumerable<CleanupCategoryScanResult> cleanupResults,
         IEnumerable<StartupEntry> startupEntries)
@@ -281,6 +372,8 @@ public sealed class MainViewModel : ObservableObject
         ScanCommand.RaiseCanExecuteChanged();
         CleanCommand.RaiseCanExecuteChanged();
         ExportCommand.RaiseCanExecuteChanged();
+        OptimizeVisualEffectsCommand.RaiseCanExecuteChanged();
+        RestoreVisualEffectsCommand.RaiseCanExecuteChanged();
         CancelCommand.RaiseCanExecuteChanged();
     }
 

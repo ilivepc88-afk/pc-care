@@ -85,6 +85,35 @@
                     </DataGrid.Columns>
                 </DataGrid>
             </TabItem>
+            <TabItem Header="性能优化">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="20" MaxWidth="760" HorizontalAlignment="Left">
+                        <TextBlock Text="视觉效果性能模式" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" />
+                        <TextBlock Text="对应“系统属性 → 高级 → 性能 → 视觉效果”的自定义配置：仅保留平滑屏幕字体边缘，关闭其他视觉效果。"
+                                   TextWrapping="Wrap" Margin="0,8,0,16" Foreground="#526273" />
+
+                        <Border Background="#F7FAFC" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="16">
+                            <StackPanel>
+                                <TextBlock Text="将关闭的项目" FontWeight="SemiBold" Margin="0,0,0,8" />
+                                <TextBlock Text="• 窗口最小化、还原和工作区动画" Margin="0,3" />
+                                <TextBlock Text="• 菜单、工具提示、组合框的动画与淡入淡出" Margin="0,3" />
+                                <TextBlock Text="• 窗口、鼠标指针和桌面图标文字阴影" Margin="0,3" />
+                                <TextBlock Text="• 拖动时显示窗口内容、平滑滚动和半透明选择框" Margin="0,3" />
+                                <TextBlock Text="• 任务栏动画、Peek、缩略图和任务栏预览缓存" Margin="0,3" />
+                                <TextBlock Text="保留：平滑屏幕字体边缘" FontWeight="SemiBold" Foreground="#18794E" Margin="0,10,0,0" />
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Text="{Binding VisualEffectsStatus}" Margin="0,14,0,12" Foreground="#526273" />
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="一键应用性能模式" Command="{Binding OptimizeVisualEffectsCommand}" MinWidth="150" />
+                            <Button Content="恢复修改前设置" Command="{Binding RestoreVisualEffectsCommand}" MinWidth="140" />
+                        </StackPanel>
+                        <TextBlock Text="仅修改当前 Windows 用户的视觉效果设置，不修改服务、驱动、电源计划或安全策略。部分效果在重新登录后完全生效。"
+                                   TextWrapping="Wrap" Margin="0,14,0,0" Foreground="#8A5A13" />
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
             <TabItem Header="启动项（只读）">
                 <DataGrid ItemsSource="{Binding StartupEntries}" Margin="12">
                     <DataGrid.Columns>

@@ -28,6 +28,7 @@ public partial class App : Application
 
         var coordinator = new CleanupCoordinator(catalog, executor, jobStore);
         var dialogService = new DialogService();
+        var visualEffectsService = new VisualEffectsService(outputResolver);
         var viewModel = new MainViewModel(
             new SystemInfoService(),
             new StartupService(),
@@ -36,6 +37,7 @@ public partial class App : Application
             coordinator,
             new ReportWriter(),
             outputResolver,
+            visualEffectsService,
             dialogService);
 
         var window = new MainWindow { DataContext = viewModel };
