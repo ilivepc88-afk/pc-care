@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Security.Principal;
 using Microsoft.Win32;
 using PcCare.Core.Models;
+using PcCare.Core.Services;
 
 namespace PcCare.Windows.Services;
 
@@ -19,13 +20,16 @@ public sealed class SystemInfoService
         string systemRoot = Path.GetPathRoot(systemDirectory) ?? "C:\\";
         var systemDrive = new DriveInfo(systemRoot);
         MemoryStatus memoryStatus = ReadMemoryStatus();
+        string? currentBuildNumber = ReadWindowsValue("CurrentBuildNumber");
 
         return new SystemSnapshot
         {
             ComputerName = Environment.MachineName,
-            WindowsEdition = ReadWindowsValue("ProductName") ?? "无法读取",
+            WindowsEdition = WindowsProductNameResolver.Resolve(
+                ReadWindowsValue("ProductName"),
+                currentBuildNumber),
             WindowsVersion = ReadWindowsValue("DisplayVersion") ?? ReadWindowsValue("ReleaseId") ?? "无法读取",
-            WindowsBuild = BuildWindowsBuild(),
+            WindowsBuild = BuildWindowsBuild(currentBuildNumber),
             CpuName = ReadCpuName(),
             TotalMemoryBytes = memoryStatus.Total,
             AvailableMemoryBytes = memoryStatus.Available,
@@ -54,9 +58,8 @@ public sealed class SystemInfoService
         }
     }
 
-    private static string BuildWindowsBuild()
+    private static string BuildWindowsBuild(string? build)
     {
-        string? build = ReadWindowsValue("CurrentBuildNumber");
         string? revision = ReadWindowsValue("UBR");
         return string.IsNullOrWhiteSpace(build)
             ? "无法读取"
