@@ -90,6 +90,95 @@
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
+            <TabItem Header="硬件与电源">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="20">
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="硬件与电源" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" />
+                                <TextBlock Text="先读取硬件、供电与电源策略，再给出适配当前设备的建议；不会套用统一高性能方案。" Foreground="#526273" Margin="0,5,0,0" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button Content="刷新" Command="{Binding RefreshHardwarePowerCommand}" />
+                                <Button Content="一键推荐优化" Command="{Binding OptimizeRecommendedPowerCommand}" />
+                            </StackPanel>
+                        </Grid>
+
+                        <TextBlock Text="设备概况" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8" />
+                        <UniformGrid Columns="3" Margin="0,0,0,14">
+                            <Border Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,8,8"><StackPanel><TextBlock Text="CPU" Foreground="#607080" /><TextBlock Text="{Binding HardwareCpuText}" TextWrapping="Wrap" Margin="0,4,0,0" /></StackPanel></Border>
+                            <Border Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,8,8"><StackPanel><TextBlock Text="内存" Foreground="#607080" /><TextBlock Text="{Binding HardwareMemoryText}" Margin="0,4,0,0" /></StackPanel></Border>
+                            <Border Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,0,8"><StackPanel><TextBlock Text="系统盘" Foreground="#607080" /><TextBlock Text="{Binding HardwareDiskText}" TextWrapping="Wrap" Margin="0,4,0,0" /></StackPanel></Border>
+                            <Border Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,8,0"><StackPanel><TextBlock Text="设备类型" Foreground="#607080" /><TextBlock Text="{Binding HardwareDeviceText}" Margin="0,4,0,0" /></StackPanel></Border>
+                            <Border Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,8,0"><StackPanel><TextBlock Text="电源状态" Foreground="#607080" /><TextBlock Text="{Binding HardwarePowerSourceText}" Margin="0,4,0,0" /></StackPanel></Border>
+                            <Border Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="10"><StackPanel><TextBlock Text="当前电源计划" Foreground="#607080" /><TextBlock Text="{Binding ActivePowerPlanText}" Margin="0,4,0,0" /></StackPanel></Border>
+                        </UniformGrid>
+
+                        <Grid Margin="0,0,0,14">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="180" /><ColumnDefinition Width="180" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <Border Background="#EEF5FB" CornerRadius="3" Padding="10" Margin="0,0,8,0"><StackPanel><TextBlock Text="性能等级" Foreground="#607080" /><TextBlock Text="{Binding HardwarePerformanceText}" FontWeight="SemiBold" Margin="0,4,0,0" /></StackPanel></Border>
+                            <Border Grid.Column="1" Background="#FFF4E5" CornerRadius="3" Padding="10" Margin="0,0,8,0"><StackPanel><TextBlock Text="主要瓶颈" Foreground="#607080" /><TextBlock Text="{Binding HardwareBottleneckText}" FontWeight="SemiBold" Margin="0,4,0,0" /></StackPanel></Border>
+                            <Border Grid.Column="2" Background="#F7F9FB" CornerRadius="3" Padding="10"><TextBlock Text="{Binding HardwareAssessmentSummary}" TextWrapping="Wrap" /></Border>
+                        </Grid>
+
+                        <Grid Margin="0,0,0,14">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,8,0">
+                                <TextBlock Text="电源策略建议" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8" />
+                                <TextBlock Text="{Binding RecommendedPowerOptimizationCountText}" Foreground="#18794E" Margin="0,0,0,6" />
+                                <DataGrid ItemsSource="{Binding PowerOptimizationItems}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" MinHeight="250">
+                                    <DataGrid.Columns>
+                                        <DataGridTemplateColumn Header="操作" Width="95">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button Command="{Binding DataContext.TogglePowerOptimizationItemCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}" CommandParameter="{Binding}">
+                                                        <Button.Style>
+                                                            <Style TargetType="Button">
+                                                                <Setter Property="Content" Value="应用建议" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding Id}" Value="power.restore-built-in-defaults"><Setter Property="Content" Value="恢复默认" /></DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Button.Style>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTextColumn Header="项目" Binding="{Binding Name}" Width="150" />
+                                        <DataGridTextColumn Header="当前" Binding="{Binding CurrentValue}" Width="100" />
+                                        <DataGridTextColumn Header="建议" Binding="{Binding RecommendedValue}" Width="100" />
+                                        <DataGridTextColumn Header="风险" Binding="{Binding RiskLevel}" Width="70" />
+                                        <DataGridTextColumn Header="说明" Binding="{Binding Reason}" Width="260" />
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="硬件改善建议" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8" />
+                                <TextBlock Text="仅供改善决策参考，本工具不会自动修改硬件或推荐具体采购型号。" Foreground="#526273" TextWrapping="Wrap" Margin="0,0,0,6" />
+                                <DataGrid ItemsSource="{Binding HardwareUpgradeRecommendations}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" MinHeight="250">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="优先级" Binding="{Binding Priority}" Width="70" />
+                                        <DataGridTextColumn Header="建议" Binding="{Binding Name}" Width="160" />
+                                        <DataGridTextColumn Header="原因" Binding="{Binding Reason}" Width="300" />
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Text="执行记录（仅本次会话）" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8" />
+                        <DataGrid ItemsSource="{Binding PowerOptimizationLog}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" MaxHeight="150" Margin="0,0,0,14">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="时间" Binding="{Binding Timestamp, StringFormat={}{0:HH:mm:ss}}" Width="85" />
+                                <DataGridTextColumn Header="项目" Binding="{Binding ItemName}" Width="160" />
+                                <DataGridTextColumn Header="操作" Binding="{Binding Action}" Width="90" />
+                                <DataGridTextColumn Header="结果" Binding="{Binding Succeeded}" Width="70" />
+                                <DataGridTextColumn Header="说明" Binding="{Binding Message}" Width="*" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <TextBlock Text="不会执行超频、BIOS/电压/TDP 调整、CPU 最小状态常驻高频、虚拟内存、休眠、USB、服务或安全功能修改。虚拟机、OEM 电源管理和组织策略会降级或锁定相关建议。" Foreground="#8A5A13" TextWrapping="Wrap" />
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
             <TabItem Header="后台优化">
                 <Grid Margin="14">
                     <Grid.RowDefinitions>

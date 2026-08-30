@@ -34,6 +34,8 @@ public partial class App : Application
             new BackgroundOptimizationService(),
             new ElevatedBackgroundOptimizationRunner(new BackgroundOptimizationManager()),
             visualEffectsService,
+            new HardwarePowerService(),
+            new PowerOptimizationManager(),
             dialogService);
 
         var window = new MainWindow { DataContext = viewModel };

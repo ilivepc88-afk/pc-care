@@ -16,9 +16,12 @@ public sealed class MainViewModel : ObservableObject
     private readonly BackgroundOptimizationService _backgroundOptimizationService;
     private readonly ElevatedBackgroundOptimizationRunner _backgroundOptimizationRunner;
     private readonly VisualEffectsService _visualEffectsService;
+    private readonly HardwarePowerService _hardwarePowerService;
+    private readonly PowerOptimizationManager _powerOptimizationManager;
     private readonly IDialogService _dialogService;
     private CancellationTokenSource? _operationCancellation;
     private SystemSnapshot? _system;
+    private HardwarePowerSnapshot? _hardwarePower;
     private bool _isBusy;
     private bool _showMicrosoftSystemTasks;
     private string _startupFilter = "全部";
@@ -34,6 +37,8 @@ public sealed class MainViewModel : ObservableObject
         BackgroundOptimizationService backgroundOptimizationService,
         ElevatedBackgroundOptimizationRunner backgroundOptimizationRunner,
         VisualEffectsService visualEffectsService,
+        HardwarePowerService hardwarePowerService,
+        PowerOptimizationManager powerOptimizationManager,
         IDialogService dialogService)
     {
         _systemInfoService = systemInfoService;
@@ -42,6 +47,8 @@ public sealed class MainViewModel : ObservableObject
         _backgroundOptimizationService = backgroundOptimizationService;
         _backgroundOptimizationRunner = backgroundOptimizationRunner;
         _visualEffectsService = visualEffectsService;
+        _hardwarePowerService = hardwarePowerService;
+        _powerOptimizationManager = powerOptimizationManager;
         _dialogService = dialogService;
 
         StartupItemsView = CollectionViewSource.GetDefaultView(StartupItems);
@@ -57,6 +64,9 @@ public sealed class MainViewModel : ObservableObject
         OptimizeBackgroundCommand = new AsyncRelayCommand(OptimizeBackgroundAsync, () => !IsBusy);
         ToggleBackgroundOptimizationItemCommand = new AsyncParameterRelayCommand(ToggleBackgroundOptimizationItemAsync, CanToggleBackgroundOptimizationItem);
         OptimizeVisualEffectsCommand = new AsyncRelayCommand(OptimizeVisualEffectsAsync, () => !IsBusy);
+        RefreshHardwarePowerCommand = new AsyncRelayCommand(ScanHardwarePowerAsync, () => !IsBusy);
+        OptimizeRecommendedPowerCommand = new AsyncRelayCommand(OptimizeRecommendedPowerAsync, () => !IsBusy);
+        TogglePowerOptimizationItemCommand = new AsyncParameterRelayCommand(TogglePowerOptimizationItemAsync, CanTogglePowerOptimizationItem);
         CancelCommand = new RelayCommand(Cancel, () => IsBusy);
     }
 
@@ -65,6 +75,12 @@ public sealed class MainViewModel : ObservableObject
     public ObservableCollection<OptimizationItem> BackgroundOptimizationItems { get; } = [];
 
     public ObservableCollection<VisualEffectSettingStatus> VisualEffectSettings { get; } = [];
+
+    public ObservableCollection<PowerOptimizationItem> PowerOptimizationItems { get; } = [];
+
+    public ObservableCollection<HardwareRecommendationItem> HardwareUpgradeRecommendations { get; } = [];
+
+    public ObservableCollection<PowerOptimizationLogEntry> PowerOptimizationLog { get; } = [];
 
     public ICollectionView StartupItemsView { get; }
 
@@ -89,6 +105,12 @@ public sealed class MainViewModel : ObservableObject
     public AsyncParameterRelayCommand ToggleBackgroundOptimizationItemCommand { get; }
 
     public AsyncRelayCommand OptimizeVisualEffectsCommand { get; }
+
+    public AsyncRelayCommand RefreshHardwarePowerCommand { get; }
+
+    public AsyncRelayCommand OptimizeRecommendedPowerCommand { get; }
+
+    public AsyncParameterRelayCommand TogglePowerOptimizationItemCommand { get; }
 
     public RelayCommand CancelCommand { get; }
 
@@ -222,6 +244,28 @@ public sealed class MainViewModel : ObservableObject
 
     public string AdministratorText => _system is null ? "权限：尚未检查" : _system.IsAdministrator ? "权限：管理员" : "权限：普通用户";
 
+    public string HardwareCpuText => _hardwarePower is null ? "请先检查" : $"{_hardwarePower.Hardware.CpuName}（{_hardwarePower.Hardware.CpuPhysicalCores} 核 / {_hardwarePower.Hardware.CpuLogicalProcessors} 线程）";
+
+    public string HardwareMemoryText => _hardwarePower is null ? "请先检查" : $"{FormatBytes((long)_hardwarePower.Hardware.MemoryAvailableBytes)} 可用 / {FormatBytes((long)_hardwarePower.Hardware.MemoryTotalBytes)}";
+
+    public string HardwareDiskText => _hardwarePower is null ? "请先检查" : $"{ToDisplayName(_hardwarePower.Hardware.SystemDiskType)} · {_hardwarePower.Hardware.SystemDiskModel}";
+
+    public string HardwareDeviceText => _hardwarePower is null ? "请先检查" : ToDisplayName(_hardwarePower.Hardware.DeviceType);
+
+    public string HardwarePowerSourceText => _hardwarePower is null ? "请先检查" : _hardwarePower.Hardware.HasBattery ? $"{_hardwarePower.Hardware.BatteryStatus} / {(_hardwarePower.Hardware.AcPowerConnected == true ? "AC 已连接" : "电池供电")}" : "台式机 / AC";
+
+    public string ActivePowerPlanText => _hardwarePower?.Power.ActiveSchemeName ?? "请先检查";
+
+    public string HardwarePerformanceText => _hardwarePower is null ? "请先检查" : ToDisplayName(_hardwarePower.Assessment.PerformanceLevel);
+
+    public string HardwareBottleneckText => _hardwarePower is null ? "请先检查" : ToDisplayName(_hardwarePower.Assessment.PrimaryBottleneck);
+
+    public string HardwareAssessmentSummary => _hardwarePower?.Assessment.Summary ?? "执行检查后，将根据硬件和电源状态给出建议。";
+
+    public int RecommendedPowerOptimizationCount => PowerOptimizationItems.Count(item => item.CanApply && item.RiskLevel == PowerRiskLevel.Low && item.Recommendation == PowerRecommendation.Recommended);
+
+    public string RecommendedPowerOptimizationCountText => $"建议优化 {RecommendedPowerOptimizationCount} 项";
+
     private async Task ScanAsync()
     {
         BeginOperation("正在进行离线检查和优化项扫描……");
@@ -232,16 +276,18 @@ public sealed class MainViewModel : ObservableObject
             Task<List<StartupItem>> startupTask = _startupService.ScanAsync(ShowMicrosoftSystemTasks, token);
             Task<List<OptimizationItem>> backgroundTask = _backgroundOptimizationService.ScanAsync(token);
             Task<List<VisualEffectSettingStatus>> visualEffectsTask = _visualEffectsService.ReadPerformanceProfileAsync(token);
+            Task<HardwarePowerSnapshot> hardwarePowerTask = _hardwarePowerService.ScanAsync(token);
 
-            await Task.WhenAll(systemTask, startupTask, backgroundTask, visualEffectsTask);
+            await Task.WhenAll(systemTask, startupTask, backgroundTask, visualEffectsTask, hardwarePowerTask);
             _system = await systemTask;
             List<StartupItem> startupItems = await startupTask;
             List<OptimizationItem> backgroundItems = await backgroundTask;
             ReplaceStartupItems(startupItems);
             ReplaceBackgroundOptimizationItems(backgroundItems);
             ReplaceVisualEffectSettings(await visualEffectsTask);
+            ReplaceHardwarePower(await hardwarePowerTask);
             NotifySystemProperties();
-            StatusText = $"检查完成：发现 {startupItems.Count} 个启动项，已读取视觉效果配置。";
+            StatusText = $"检查完成：发现 {startupItems.Count} 个启动项，已读取视觉效果、硬件与电源配置。";
         }
         catch (OperationCanceledException)
         {
@@ -540,6 +586,127 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
+    private async Task ScanHardwarePowerAsync()
+    {
+        BeginOperation("正在读取硬件与电源状态……");
+        try
+        {
+            ReplaceHardwarePower(await _hardwarePowerService.ScanAsync(_operationCancellation!.Token));
+            StatusText = "硬件与电源状态已刷新。";
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText = "硬件与电源检查已取消。";
+        }
+        catch (Exception exception)
+        {
+            StatusText = "硬件与电源检查失败。";
+            _dialogService.ShowError(exception.Message, "硬件与电源检查失败");
+        }
+        finally
+        {
+            EndOperation();
+        }
+    }
+
+    private async Task OptimizeRecommendedPowerAsync()
+    {
+        List<PowerOptimizationItem> candidates = PowerOptimizationItems
+            .Where(item => item.CanApply && item.RiskLevel == PowerRiskLevel.Low && item.Recommendation == PowerRecommendation.Recommended)
+            .ToList();
+        if (candidates.Count == 0)
+        {
+            _dialogService.ShowInfo("当前没有适合一键执行的低风险电源建议。笔记本电池策略、PCIe 可选项、OEM 管理和组织策略项不会自动处理。", "无需一键优化");
+            return;
+        }
+
+        string names = string.Join("、", candidates.Select(item => item.Name));
+        if (!_dialogService.Confirm(
+                $"将按当前设备画像执行 {candidates.Count} 项低风险建议：{names}。不会修改 CPU 最小状态、CPU 电压、BIOS、服务、虚拟内存、休眠或 USB 设置。是否继续？",
+                "确认一键推荐优化"))
+        {
+            return;
+        }
+
+        BeginOperation("正在应用自适应电源建议……");
+        try
+        {
+            int succeeded = 0;
+            foreach (PowerOptimizationItem item in candidates)
+            {
+                _operationCancellation!.Token.ThrowIfCancellationRequested();
+                PowerOptimizationOperationResult result = await _powerOptimizationManager.ApplyAsync(new PowerOptimizationOperation(item.Id, PowerOptimizationAction.Apply), _operationCancellation.Token);
+                AddPowerOptimizationLog(item, result);
+                if (result.Succeeded)
+                {
+                    succeeded++;
+                }
+            }
+
+            ReplaceHardwarePower(await _hardwarePowerService.ScanAsync(_operationCancellation!.Token));
+            StatusText = $"一键推荐优化完成：成功 {succeeded} 项，失败 {candidates.Count - succeeded} 项。";
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText = "一键推荐优化已取消。";
+        }
+        catch (Exception exception)
+        {
+            StatusText = "一键推荐优化失败。";
+            _dialogService.ShowError(exception.Message, "一键推荐优化失败");
+        }
+        finally
+        {
+            EndOperation();
+        }
+    }
+
+    private async Task TogglePowerOptimizationItemAsync(object? parameter)
+    {
+        if (parameter is not PowerOptimizationItem item || !(item.CanApply || item.CanRestore))
+        {
+            return;
+        }
+
+        PowerOptimizationAction action = item.Id == "power.restore-built-in-defaults"
+            ? PowerOptimizationAction.RestoreDefault
+            : PowerOptimizationAction.Apply;
+        string actionText = action == PowerOptimizationAction.RestoreDefault ? "恢复默认" : "应用建议";
+        if (!_dialogService.Confirm($"{actionText}“{item.Name}”吗？{item.Reason}", $"确认{actionText}"))
+        {
+            return;
+        }
+
+        BeginOperation($"正在{actionText}……");
+        try
+        {
+            PowerOptimizationOperationResult result = await _powerOptimizationManager.ApplyAsync(new PowerOptimizationOperation(item.Id, action), _operationCancellation!.Token);
+            AddPowerOptimizationLog(item, result);
+            if (!result.Succeeded)
+            {
+                StatusText = $"{actionText}失败：{result.Message}";
+                _dialogService.ShowError(result.Message, $"{actionText}失败");
+                return;
+            }
+
+            ReplaceHardwarePower(await _hardwarePowerService.ScanAsync(_operationCancellation.Token));
+            StatusText = $"{actionText}完成：{item.Name}。";
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText = "操作已取消。";
+        }
+        catch (Exception exception)
+        {
+            StatusText = $"{actionText}失败。";
+            _dialogService.ShowError(exception.Message, $"{actionText}失败");
+        }
+        finally
+        {
+            EndOperation();
+        }
+    }
+
     private bool FilterStartupItem(object value)
     {
         if (value is not StartupItem item)
@@ -605,6 +772,8 @@ public sealed class MainViewModel : ObservableObject
 
     private bool CanToggleBackgroundOptimizationItem(object? parameter) => !IsBusy && parameter is OptimizationItem item && (item.CanOptimize || item.CanRestore);
 
+    private bool CanTogglePowerOptimizationItem(object? parameter) => !IsBusy && parameter is PowerOptimizationItem item && (item.CanApply || item.CanRestore);
+
     private void ReplaceStartupItems(IEnumerable<StartupItem> startupItems)
     {
         StartupItems.Clear();
@@ -656,6 +825,48 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
+    private void ReplaceHardwarePower(HardwarePowerSnapshot snapshot)
+    {
+        _hardwarePower = snapshot;
+        PowerOptimizationItems.Clear();
+        foreach (PowerOptimizationItem item in snapshot.OptimizationItems)
+        {
+            PowerOptimizationItems.Add(item);
+        }
+
+        HardwareUpgradeRecommendations.Clear();
+        foreach (HardwareRecommendationItem item in snapshot.Assessment.UpgradeRecommendations)
+        {
+            HardwareUpgradeRecommendations.Add(item);
+        }
+
+        OnPropertyChanged(nameof(HardwareCpuText));
+        OnPropertyChanged(nameof(HardwareMemoryText));
+        OnPropertyChanged(nameof(HardwareDiskText));
+        OnPropertyChanged(nameof(HardwareDeviceText));
+        OnPropertyChanged(nameof(HardwarePowerSourceText));
+        OnPropertyChanged(nameof(ActivePowerPlanText));
+        OnPropertyChanged(nameof(HardwarePerformanceText));
+        OnPropertyChanged(nameof(HardwareBottleneckText));
+        OnPropertyChanged(nameof(HardwareAssessmentSummary));
+        OnPropertyChanged(nameof(RecommendedPowerOptimizationCount));
+        OnPropertyChanged(nameof(RecommendedPowerOptimizationCountText));
+        OptimizeRecommendedPowerCommand.RaiseCanExecuteChanged();
+        TogglePowerOptimizationItemCommand.RaiseCanExecuteChanged();
+    }
+
+    private void AddPowerOptimizationLog(PowerOptimizationItem item, PowerOptimizationOperationResult result)
+    {
+        PowerOptimizationLog.Insert(0, new PowerOptimizationLogEntry(
+            DateTimeOffset.Now,
+            item.Name,
+            result.Action,
+            item.CurrentValue,
+            item.RecommendedValue,
+            result.Succeeded,
+            result.Message));
+    }
+
     private static string GetBackgroundCompletionHint(IEnumerable<OptimizationItem> items)
     {
         return items.Any(item => item.CurrentState == OptimizationState.Disabled && (item.RequiresLogoff || item.RequiresExplorerRestart || item.RequiresRestart))
@@ -690,6 +901,9 @@ public sealed class MainViewModel : ObservableObject
         OptimizeBackgroundCommand.RaiseCanExecuteChanged();
         ToggleBackgroundOptimizationItemCommand.RaiseCanExecuteChanged();
         OptimizeVisualEffectsCommand.RaiseCanExecuteChanged();
+        RefreshHardwarePowerCommand.RaiseCanExecuteChanged();
+        OptimizeRecommendedPowerCommand.RaiseCanExecuteChanged();
+        TogglePowerOptimizationItemCommand.RaiseCanExecuteChanged();
         CancelCommand.RaiseCanExecuteChanged();
     }
 
@@ -726,4 +940,41 @@ public sealed class MainViewModel : ObservableObject
 
         return $"{value:0.##} {units[unit]}";
     }
+
+    private static string ToDisplayName(DeviceType value) => value switch
+    {
+        DeviceType.Desktop => "台式机",
+        DeviceType.Laptop => "笔记本",
+        DeviceType.VirtualMachine => "虚拟机",
+        _ => "无法识别"
+    };
+
+    private static string ToDisplayName(DiskType value) => value switch
+    {
+        DiskType.Hdd => "机械硬盘 HDD",
+        DiskType.SataSsd => "SATA SSD",
+        DiskType.NvmeSsd => "NVMe SSD",
+        DiskType.SsdUnknown => "SSD（总线未知）",
+        _ => "无法识别"
+    };
+
+    private static string ToDisplayName(HardwarePerformanceLevel value) => value switch
+    {
+        HardwarePerformanceLevel.Legacy => "较低",
+        HardwarePerformanceLevel.Low => "偏低",
+        HardwarePerformanceLevel.Standard => "一般",
+        HardwarePerformanceLevel.Good => "良好",
+        HardwarePerformanceLevel.High => "优秀",
+        _ => "无法评估"
+    };
+
+    private static string ToDisplayName(PrimaryBottleneck value) => value switch
+    {
+        PrimaryBottleneck.Disk => "系统盘",
+        PrimaryBottleneck.Memory => "内存",
+        PrimaryBottleneck.Cpu => "CPU 平台",
+        PrimaryBottleneck.StorageSpace => "系统盘可用空间",
+        PrimaryBottleneck.None => "无明显瓶颈",
+        _ => "无法评估"
+    };
 }
