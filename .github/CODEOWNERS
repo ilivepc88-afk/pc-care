@@ -1,0 +1,5 @@
+# SignPath source and build-policy material must be reviewed by the maintainer.
+/.github/workflows/ @ilivepc88-afk
+/.signpath/ @ilivepc88-afk
+/CODE_SIGNING_POLICY.md @ilivepc88-afk
+/SECURITY.md @ilivepc88-afk

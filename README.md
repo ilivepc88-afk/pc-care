@@ -2,6 +2,8 @@
 
 PcCare 是一个面向公司老旧 Windows 电脑的离线系统检查与视觉效果优化工具。它不依赖服务端、不安装服务、不常驻、不上传数据，也不包含杀毒、文件清理、系统精简或高风险“注册表加速”。
 
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
+
 当前版本：`0.6.0`
 
 ## 功能
@@ -30,6 +32,21 @@ PcCare 是一个面向公司老旧 Windows 电脑的离线系统检查与视觉�
 - 不创建备份、还原点、持久化操作日志或电源计划副本。
 
 详见 [安全设计](docs/SAFETY_DESIGN.md)。
+
+## 开源、隐私与安全
+
+- 本项目采用 [Apache License 2.0](LICENSE) 开源；使用、修改、再发布时请保留许可证、版权与 `NOTICE` 文件。
+- 本程序不会向任何网络系统传输信息，除非用户或安装、操作该程序的人员明确要求该行为。当前版本不提供此类传输功能。详见[隐私说明](docs/PRIVACY.md)。
+- 安全问题请按 [SECURITY.md](SECURITY.md) 私密报告；不要在公开 Issue 中披露未修复漏洞、凭据或业务数据。
+- 第三方依赖及其许可证见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).
+
+签名策略、维护者职责、人工批准和发布控制见 [CODE_SIGNING_POLICY.md](CODE_SIGNING_POLICY.md)。SignPath 审核通过前，公开 Release 仍可能显示 Windows SmartScreen 警告；不会伪造或绕过 Windows 信任机制。
+
+SignPath Foundation 申请、GitHub Secrets/Variables 配置和正式发布操作见 [SignPath 启用清单](docs/SIGNPATH_ENROLLMENT.md)。
 
 ## 开发环境
 
@@ -78,12 +95,14 @@ dotnet publish src/PcCare.App/PcCare.App.csproj `
 
 ## GitHub Release
 
-推送形如 `v0.6.0` 的版本标签后，GitHub Actions 会先完成构建和测试，再自动创建 Release，并上传两个带版本号的 EXE 与对应 SHA256 文件。
+推送形如 `v0.6.0` 的版本标签后，GitHub Actions 会先完成构建和测试。SignPath 审核并配置完成后，Release 工作流会提交签名请求；维护者在 SignPath 人工批准后，才创建 Release 并上传两个带版本号的签名 EXE 与对应 SHA256 文件。
 
 - `PcCare-vX.Y.Z-win-x64-offline.exe`：完整离线版。
 - `PcCare-vX.Y.Z-win-x64-lite.exe`：需预装 .NET 10 Desktop Runtime x64 的轻量版。
 
 示例：`git tag -a v0.6.0 -m "PcCare v0.6.0"`，然后执行 `git push origin v0.6.0`。
+
+发布前必须将 `src/PcCare.App/PcCare.App.csproj` 中的 `Version` 更新为与标签匹配的版本号；例如标签为 `v0.6.1`，版本必须为 `0.6.1`。
 
 ## 使用方法
 

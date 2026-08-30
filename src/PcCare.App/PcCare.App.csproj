@@ -5,6 +5,11 @@
     <UseWPF>true</UseWPF>
     <RootNamespace>PcCare.App</RootNamespace>
     <AssemblyName>PcCare</AssemblyName>
+    <Product>PcCare</Product>
+    <Company>PcCare Contributors</Company>
+    <Copyright>Copyright © 2026 PcCare Contributors</Copyright>
+    <RepositoryUrl>https://github.com/ilivepc88-afk/pc-care</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
     <Version>0.6.0</Version>
     <FileVersion>0.6.0.0</FileVersion>
     <ApplicationManifest>app.manifest</ApplicationManifest>

@@ -9,3 +9,11 @@ artifacts/
 publish/
 Reports/
 *.result.json
+*.pfx
+*.p12
+*.snk
+*.key
+*.pem
+*.cer
+*.crt
+.env
