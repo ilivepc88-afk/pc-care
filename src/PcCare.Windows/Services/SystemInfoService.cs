@@ -1,6 +1,6 @@
-using System.Management;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
+using Microsoft.Win32.SafeHandles;
 using Microsoft.Win32;
 using PcCare.Core.Models;
 using PcCare.Core.Services;
@@ -35,7 +35,7 @@ public sealed class SystemInfoService
             AvailableMemoryBytes = memoryStatus.Available,
             SystemDriveTotalBytes = systemDrive.IsReady ? systemDrive.TotalSize : 0,
             SystemDriveFreeBytes = systemDrive.IsReady ? systemDrive.AvailableFreeSpace : 0,
-            DiskMediaType = ReadDiskMediaType(),
+            DiskMediaType = ReadDiskMediaType(systemRoot),
             Uptime = TimeSpan.FromMilliseconds(Environment.TickCount64),
             IsAdministrator = IsAdministrator(),
             RebootPending = IsRebootPending(),
@@ -81,34 +81,44 @@ public sealed class SystemInfoService
         }
     }
 
-    private static string ReadDiskMediaType()
+    private static string ReadDiskMediaType(string systemRoot)
     {
-        try
-        {
-            var scope = new ManagementScope(@"\\.\root\Microsoft\Windows\Storage");
-            scope.Connect();
-            using var searcher = new ManagementObjectSearcher(scope, new ObjectQuery("SELECT MediaType FROM MSFT_PhysicalDisk"));
-            var mediaTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (ManagementObject disk in searcher.Get().Cast<ManagementObject>())
-            {
-                uint mediaType = Convert.ToUInt32(disk["MediaType"] ?? 0, System.Globalization.CultureInfo.InvariantCulture);
-                mediaTypes.Add(mediaType switch
-                {
-                    3 => "HDD",
-                    4 => "SSD",
-                    5 => "SCM",
-                    _ => "未识别"
-                });
-                disk.Dispose();
-            }
-
-            return mediaTypes.Count == 0 ? "未识别" : string.Join(" / ", mediaTypes.Order());
-        }
-        catch (Exception exception) when (exception is ManagementException or UnauthorizedAccessException or COMException)
+        string volumeName = @"\\.\" + systemRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        using SafeFileHandle volume = CreateFile(
+            volumeName,
+            desiredAccess: 0,
+            shareMode: FileShareRead | FileShareWrite | FileShareDelete,
+            securityAttributes: IntPtr.Zero,
+            creationDisposition: OpenExisting,
+            flagsAndAttributes: 0,
+            templateFile: IntPtr.Zero);
+        if (volume.IsInvalid)
         {
             return "未识别";
         }
+
+        var query = new StoragePropertyQuery
+        {
+            PropertyId = StorageDeviceSeekPenaltyProperty,
+            QueryType = PropertyStandardQuery,
+            AdditionalParameters = 0
+        };
+        bool succeeded = DeviceIoControl(
+            volume,
+            IoctlStorageQueryProperty,
+            ref query,
+            (uint)Marshal.SizeOf<StoragePropertyQuery>(),
+            out DeviceSeekPenaltyDescriptor descriptor,
+            (uint)Marshal.SizeOf<DeviceSeekPenaltyDescriptor>(),
+            out uint bytesReturned,
+            IntPtr.Zero);
+
+        if (!succeeded || bytesReturned < 9)
+        {
+            return "未识别";
+        }
+
+        return descriptor.IncursSeekPenalty ? "HDD" : "SSD";
     }
 
     private static bool IsAdministrator()
@@ -158,6 +168,32 @@ public sealed class SystemInfoService
 
     private readonly record struct MemoryStatus(ulong Total, ulong Available);
 
+    private const uint FileShareRead = 0x00000001;
+    private const uint FileShareWrite = 0x00000002;
+    private const uint FileShareDelete = 0x00000004;
+    private const uint OpenExisting = 3;
+    private const uint IoctlStorageQueryProperty = 0x002D1400;
+    private const int StorageDeviceSeekPenaltyProperty = 7;
+    private const int PropertyStandardQuery = 0;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct StoragePropertyQuery
+    {
+        public int PropertyId;
+        public int QueryType;
+        public byte AdditionalParameters;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct DeviceSeekPenaltyDescriptor
+    {
+        public uint Version;
+        public uint Size;
+
+        [MarshalAs(UnmanagedType.U1)]
+        public bool IncursSeekPenalty;
+    }
+
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
     private sealed class MemoryStatusEx
     {
@@ -175,4 +211,26 @@ public sealed class SystemInfoService
     [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GlobalMemoryStatusEx([In, Out] MemoryStatusEx buffer);
+
+    [DllImport("kernel32.dll", EntryPoint = "CreateFileW", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern SafeFileHandle CreateFile(
+        string fileName,
+        uint desiredAccess,
+        uint shareMode,
+        IntPtr securityAttributes,
+        uint creationDisposition,
+        uint flagsAndAttributes,
+        IntPtr templateFile);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool DeviceIoControl(
+        SafeFileHandle device,
+        uint controlCode,
+        ref StoragePropertyQuery inputBuffer,
+        uint inputBufferSize,
+        out DeviceSeekPenaltyDescriptor outputBuffer,
+        uint outputBufferSize,
+        out uint bytesReturned,
+        IntPtr overlapped);
 }
