@@ -93,7 +93,7 @@ public sealed class HardwarePowerRecommendationTests
     }
 
     private static PowerOptimizationItem Item(IEnumerable<PowerOptimizationItem> items, string id) =>
-        Assert.Single(items.Where(item => item.Id == id));
+        Assert.Single(items, item => item.Id == id);
 
     private static HardwareProfile Profile(DeviceType deviceType, DiskType diskType, int memoryGb, bool? acConnected = true) => new()
     {

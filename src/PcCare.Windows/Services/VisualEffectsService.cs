@@ -102,7 +102,7 @@ public sealed class VisualEffectsService
         object? value = key?.GetValue("VisualFXSetting");
         return value switch
         {
-            int 3 => "性能模式",
+            3 => "性能模式",
             int number => $"自定义（值 {number}）",
             _ => "Windows 默认/未配置"
         };
