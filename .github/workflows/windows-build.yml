@@ -37,7 +37,7 @@ jobs:
         run: dotnet publish src/PcCare.App/PcCare.App.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o artifacts/offline
 
       - name: Publish lightweight executable
-        run: dotnet publish src/PcCare.App/PcCare.App.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:PublishTrimmed=false -o artifacts/lite
+        run: dotnet publish src/PcCare.App/PcCare.App.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:PublishTrimmed=false -p:EnableCompressionInSingleFile=false -p:IncludeNativeLibrariesForSelfExtract=false -o artifacts/lite
 
       - name: Create checksums and size summary
         shell: pwsh

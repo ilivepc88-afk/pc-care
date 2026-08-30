@@ -64,6 +64,8 @@ dotnet publish src/PcCare.App/PcCare.App.csproj `
 dotnet publish src/PcCare.App/PcCare.App.csproj `
   -c Release -r win-x64 --self-contained false `
   -p:PublishSingleFile=true -p:PublishTrimmed=false `
+  -p:EnableCompressionInSingleFile=false `
+  -p:IncludeNativeLibrariesForSelfExtract=false `
   -o artifacts/lite
 ```
 
