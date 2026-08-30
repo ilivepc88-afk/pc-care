@@ -10,6 +10,10 @@ All notable changes are documented here. Version tags use the `vX.Y.Z` format an
 - Individual taskbar switches for search, Task View, Widgets button, and left alignment.
 - Lock-screen Spotlight and tips switch that preserves the normal Windows lock and sign-in screens.
 
+### Fixed
+
+- Windows 11 search highlights now use the documented computer policy and a one-time UAC operation, avoiding access-denied errors on protected `SearchSettings` user keys.
+
 ## [0.6.0] - 2026-08-30
 
 ### Added

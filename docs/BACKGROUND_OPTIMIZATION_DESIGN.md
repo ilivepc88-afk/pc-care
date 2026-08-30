@@ -11,7 +11,7 @@
 | 优化项 | 注册表目标 | 条件 | 恢复默认 |
 |---|---|---|---|
 | Windows 使用建议 / 设置建议 | HKCU ContentDeliveryManager | Windows Build 支持 | 删除 PcCare 创建的值 |
-| Windows 11 搜索要点 | HKCU SearchSettings | Windows 11 Build 22000+ | 删除 PcCare 创建的值 |
+| Windows 11 搜索要点 | HKLM Windows Search 策略 | Windows 11 Build 22000+；单次 UAC | 删除 PcCare 创建的策略值 |
 | Windows 11 任务栏搜索 / 任务视图 / 小组件按钮 / 左对齐 | HKCU Explorer Advanced | Windows 11 Build 22000+ | 删除 PcCare 创建的值 |
 | Consumer Experience | HKLM CloudContent 策略 | 企业/教育/专业版；LTSC 无该内容时显示已优化 | 删除 PcCare 创建的策略值 |
 | Windows Widgets | HKLM Dsh 策略 | 检测到 Web Experience Pack 或既有 Dsh 状态 | 删除 PcCare 创建的策略值 |

@@ -8,7 +8,6 @@ internal static class BackgroundOptimizationCatalog
     private const string ContentDeliveryManager = @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager";
     private const string CloudContentPolicy = @"SOFTWARE\Policies\Microsoft\Windows\CloudContent";
     private const string ExplorerAdvanced = @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced";
-    private const string SearchSettings = @"Software\Microsoft\Windows\CurrentVersion\SearchSettings";
 
     public static readonly IReadOnlyList<BackgroundOptimizationRule> Rules =
     [
@@ -51,10 +50,10 @@ internal static class BackgroundOptimizationCatalog
             OptimizationRecommendation.Recommended,
             "搜索要点会在任务栏搜索框和搜索主页展示动态内容建议。",
             "不关闭 Windows Search 服务、索引或本地文件搜索；仅关闭搜索要点展示。",
-            [UserSearchSetting("IsDynamicSearchBoxEnabled")],
+            [PolicyMachine(@"SOFTWARE\Policies\Microsoft\Windows\Windows Search", "EnableDynamicContentInWSB")],
             0,
-            false,
-            false,
+            true,
+            true,
             true,
             detector => detector.WindowsBuild >= 22000),
         new(
@@ -260,8 +259,6 @@ internal static class BackgroundOptimizationCatalog
     public static BackgroundOptimizationRule? Find(string id) => Rules.FirstOrDefault(rule => string.Equals(rule.Id, id, StringComparison.Ordinal));
 
     private static RegistryValueLocation UserSetting(string valueName) => new(RegistryHive.CurrentUser, ContentDeliveryManager, valueName);
-
-    private static RegistryValueLocation UserSearchSetting(string valueName) => new(RegistryHive.CurrentUser, SearchSettings, valueName);
 
     private static RegistryValueLocation UserTaskbarSetting(string valueName) => new(RegistryHive.CurrentUser, ExplorerAdvanced, valueName);
 
