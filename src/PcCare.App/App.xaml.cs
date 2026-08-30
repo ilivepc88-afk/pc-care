@@ -19,6 +19,13 @@ public partial class App : Application
             return;
         }
 
+        if (StartupOperationCommandLine.TryParseBackgroundOptimization(e.Args, out var backgroundOperation) && backgroundOperation is not null)
+        {
+            var result = new BackgroundOptimizationManager().ApplyAsync(backgroundOperation).GetAwaiter().GetResult();
+            Shutdown(result.Succeeded ? 0 : 1);
+            return;
+        }
+
         var outputResolver = new OutputDirectoryResolver();
         var dialogService = new DialogService();
         var visualEffectsService = new VisualEffectsService();
@@ -26,6 +33,8 @@ public partial class App : Application
             new SystemInfoService(),
             new StartupService(),
             new ElevatedStartupOperationRunner(new StartupManager()),
+            new BackgroundOptimizationService(),
+            new ElevatedBackgroundOptimizationRunner(new BackgroundOptimizationManager()),
             new ReportWriter(),
             outputResolver,
             visualEffectsService,

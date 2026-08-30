@@ -34,6 +34,21 @@ public sealed class ReportWriterTests
                     RiskLevel = StartupRiskLevel.Medium,
                     Reason = "无法可靠判断用途。"
                 }
+            ],
+            BackgroundOptimizationItems =
+            [
+                new OptimizationItem
+                {
+                    Id = "edge.background-mode",
+                    Name = "Edge <后台>",
+                    Category = OptimizationCategory.BrowserBackground,
+                    Description = "测试",
+                    CurrentState = OptimizationState.Disabled,
+                    RegistryPath = "HKLM\\SOFTWARE\\Policies\\Microsoft\\Edge",
+                    RegistryName = "BackgroundModeEnabled",
+                    Reason = "<安全编码>",
+                    Impact = "不会卸载 Edge"
+                }
             ]
         };
 
@@ -44,6 +59,8 @@ public sealed class ReportWriterTests
         string html = await File.ReadAllTextAsync(htmlPath);
         Assert.Contains("Windows &lt;测试&gt;", html, StringComparison.Ordinal);
         Assert.Contains("A&amp;B", html, StringComparison.Ordinal);
+        Assert.Contains("Edge &lt;后台&gt;", html, StringComparison.Ordinal);
+        Assert.Contains("&lt;安全编码&gt;", html, StringComparison.Ordinal);
         Assert.DoesNotContain("https://", html, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("\"computerName\": \"PC-01\"", await File.ReadAllTextAsync(jsonPath), StringComparison.Ordinal);
     }

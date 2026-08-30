@@ -72,6 +72,18 @@ public sealed class ReportWriter
             html.AppendLine($"<tr><td>{E(entry.TimeUtc.ToString("O", System.Globalization.CultureInfo.InvariantCulture))}</td><td>{E(entry.ItemName)}</td><td>{E(entry.SourceType.ToString())}</td><td>{E(entry.Action.ToString())}</td><td>{(entry.PreviousEnabled ? "已启用" : "已禁用")}</td><td>{(entry.CurrentEnabled ? "已启用" : "已禁用")}</td><td>{(entry.Succeeded ? "成功" : "失败")}</td><td>{E(entry.Message)}</td></tr>");
         }
 
+        html.AppendLine("</tbody></table><h2>后台优化</h2><table><thead><tr><th>名称</th><th>分类</th><th>当前状态</th><th>建议</th><th>风险</th><th>注册表位置</th><th>值名称</th><th>原因</th><th>影响说明</th></tr></thead><tbody>");
+        foreach (OptimizationItem item in report.BackgroundOptimizationItems)
+        {
+            html.AppendLine($"<tr><td>{E(item.Name)}</td><td>{E(item.Category.ToString())}</td><td>{E(item.CurrentState.ToString())}</td><td>{E(item.Recommendation.ToString())}</td><td>{E(item.RiskLevel.ToString())}</td><td>{E(item.RegistryPath)}</td><td>{E(item.RegistryName)}</td><td>{E(item.Reason)}</td><td>{E(item.Impact)}</td></tr>");
+        }
+
+        html.AppendLine("</tbody></table><h2>后台优化操作记录</h2><table><thead><tr><th>时间（UTC）</th><th>ID</th><th>项目</th><th>旧状态</th><th>新状态</th><th>注册表位置</th><th>值名称</th><th>操作</th><th>结果</th><th>说明</th></tr></thead><tbody>");
+        foreach (BackgroundOptimizationLogEntry entry in report.BackgroundOptimizationLog)
+        {
+            html.AppendLine($"<tr><td>{E(entry.TimeUtc.ToString("O", System.Globalization.CultureInfo.InvariantCulture))}</td><td>{E(entry.ItemId)}</td><td>{E(entry.ItemName)}</td><td>{E(entry.PreviousState.ToString())}</td><td>{E(entry.CurrentState.ToString())}</td><td>{E(entry.RegistryPath)}</td><td>{E(entry.RegistryName)}</td><td>{E(entry.Action.ToString())}</td><td>{(entry.Succeeded ? "成功" : "失败")}</td><td>{E(entry.Message)}</td></tr>");
+        }
+
         html.AppendLine("</tbody></table><p class=\"meta\">本报告完全离线生成，不包含远程资源。</p></body></html>");
         return html.ToString();
     }

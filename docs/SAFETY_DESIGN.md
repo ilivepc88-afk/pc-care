@@ -20,6 +20,8 @@ PcCare 提供离线体检、保守启动项优化、本地报告和当前用户�
 - Windows 服务、驱动修改。
 - 删除计划任务、启动项文件、注册表 Run 值或 UWP 项。
 - Windows Update、Defender、安全策略、遥测、搜索索引修改。
+- Windows 防火墙、UAC、SmartScreen、BITS、SysMain、WMI、通知、剪贴板、最近文件/Jump List、全局后台应用开关。
+- 卸载或删除 AppX、Edge、WebView2、Windows 组件或浏览器配置文件。
 - 内存“释放”、TCP 参数、HPET、电源和游戏优化。
 - 在线脚本、插件、规则更新、远程接口和遥测。
 
@@ -49,3 +51,11 @@ PcCare 提供离线体检、保守启动项优化、本地报告和当前用户�
 - 计划任务只调用 Windows 计划任务的 `Enabled` 属性，不删除任务；UWP StartupTask 本期不扫描、不修改。
 - 企业安全、EDR、终端管控、VPN、驱动、硬件控制和 Microsoft Windows 系统组件默认保护。未知项允许用户逐项确认，但绝不进入一键优化。
 - 操作日志只记录时间、项目名、来源、启用前后状态、动作和结果，不写入完整命令行或凭据。
+
+## 后台优化边界
+
+- 只处理 Windows 提示/推荐、Consumer Experience、已检测功能的 Widgets/News and interests/Copilot、浏览器后台模式、个性化体验、广告 ID 和 Spotlight。
+- 所有可写项来自固定规则表。界面和 UAC 子进程仅传递规则 ID 与操作类型，不接收任意注册表路径、PowerShell 或命令。
+- 同名 HKCU/HKLM 策略值已存在且不是 PcCare 创建时，显示为“组织策略”并拒绝覆盖；Edge 与 Chrome 同样遵守此规则。
+- “恢复默认”仅删除 PcCare 创建且带本地所有权标记的值；不保留旧值、不创建备份、不创建还原点、不删除企业策略。
+- 操作日志记录时间、ID/名称、前后状态、目标注册表位置和值名、动作、结果和错误信息。

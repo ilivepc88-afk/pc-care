@@ -39,5 +39,9 @@ public sealed class ScanReport
 
     public List<StartupOperationLogEntry> StartupOperationLog { get; init; } = [];
 
-    public string ApplicationVersion { get; init; } = "0.4.0";
+    public List<OptimizationItem> BackgroundOptimizationItems { get; init; } = [];
+
+    public List<BackgroundOptimizationLogEntry> BackgroundOptimizationLog { get; init; } = [];
+
+    public string ApplicationVersion { get; init; } = "0.5.0";
 }
