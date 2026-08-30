@@ -24,32 +24,28 @@
             </Grid.ColumnDefinitions>
             <StackPanel>
                 <TextBlock Text="PcCare 系统优化工具" FontSize="26" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" />
-                <TextBlock Text="离线体检 · 安全清理 · 启动项只读 · 本地报告" Foreground="#607080" Margin="0,4,0,0" />
+                <TextBlock Text="离线体检 · 启动项只读 · 本地报告 · 性能优化" Foreground="#607080" Margin="0,4,0,0" />
             </StackPanel>
             <Border Grid.Column="1" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Background="White" CornerRadius="4" Padding="12,8">
                 <TextBlock Text="{Binding AdministratorText}" />
             </Border>
         </Grid>
 
-        <UniformGrid Grid.Row="1" Columns="4" Margin="0,0,0,16">
+        <UniformGrid Grid.Row="1" Columns="3" Margin="0,0,0,16">
             <Border Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="14" Margin="0,0,8,0">
                 <StackPanel><TextBlock Text="计算机" Foreground="#607080" /><TextBlock Text="{Binding ComputerName}" FontSize="16" FontWeight="SemiBold" Margin="0,5,0,0" /></StackPanel>
             </Border>
             <Border Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="14" Margin="0,0,8,0">
                 <StackPanel><TextBlock Text="系统" Foreground="#607080" /><TextBlock Text="{Binding WindowsSummary}" FontSize="16" FontWeight="SemiBold" Margin="0,5,0,0" TextTrimming="CharacterEllipsis" /></StackPanel>
             </Border>
-            <Border Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="14" Margin="0,0,8,0">
-                <StackPanel><TextBlock Text="系统盘剩余" Foreground="#607080" /><TextBlock Text="{Binding SystemDriveFree}" FontSize="16" FontWeight="SemiBold" Margin="0,5,0,0" /></StackPanel>
-            </Border>
             <Border Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="14">
-                <StackPanel><TextBlock Text="预计可清理" Foreground="#607080" /><TextBlock Text="{Binding ReclaimableSpace}" FontSize="16" FontWeight="SemiBold" Margin="0,5,0,0" /></StackPanel>
+                <StackPanel><TextBlock Text="系统盘剩余" Foreground="#607080" /><TextBlock Text="{Binding SystemDriveFree}" FontSize="16" FontWeight="SemiBold" Margin="0,5,0,0" /></StackPanel>
             </Border>
         </UniformGrid>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,12">
             <Button Content="开始体检" Command="{Binding ScanCommand}" IsDefault="True" />
             <Button Content="停止扫描" Command="{Binding CancelCommand}" />
-            <Button Content="执行清理" Command="{Binding CleanCommand}" />
             <Button Content="导出报告" Command="{Binding ExportCommand}" />
         </StackPanel>
 
@@ -69,21 +65,9 @@
                         <TextBlock Grid.Row="4" Text="磁盘介质" FontWeight="SemiBold" Margin="0,12,0,0" /><TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding DiskMediaType}" Margin="0,12,0,0" />
                         <TextBlock Grid.Row="5" Text="连续运行" FontWeight="SemiBold" Margin="0,12,0,0" /><TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding UptimeSummary}" Margin="0,12,0,0" />
                         <TextBlock Grid.Row="6" Text="待重启" FontWeight="SemiBold" Margin="0,12,0,0" /><TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding RebootPendingText}" Margin="0,12,0,0" />
-                        <TextBlock Grid.Row="7" Text="说明" FontWeight="SemiBold" Margin="0,12,0,0" /><TextBlock Grid.Row="7" Grid.Column="1" Text="第一阶段仅提供安全清理和启动项只读检查，不修改服务、注册表、更新、安全软件或用户文件。" TextWrapping="Wrap" Margin="0,12,0,0" />
+                        <TextBlock Grid.Row="7" Text="说明" FontWeight="SemiBold" Margin="0,12,0,0" /><TextBlock Grid.Row="7" Grid.Column="1" Text="提供系统体检、启动项只读检查和视觉效果性能优化，不修改服务、更新、安全软件或用户文件。" TextWrapping="Wrap" Margin="0,12,0,0" />
                     </Grid>
                 </ScrollViewer>
-            </TabItem>
-            <TabItem Header="可清理项目">
-                <DataGrid ItemsSource="{Binding CleanupCategories}" Margin="12" IsReadOnly="False">
-                    <DataGrid.Columns>
-                        <DataGridCheckBoxColumn Header="选择" Binding="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" Width="60" />
-                        <DataGridTextColumn Header="分类" Binding="{Binding DisplayName}" Width="180" IsReadOnly="True" />
-                        <DataGridTextColumn Header="文件数" Binding="{Binding FileCount}" Width="80" IsReadOnly="True" />
-                        <DataGridTextColumn Header="可释放空间" Binding="{Binding SizeText}" Width="110" IsReadOnly="True" />
-                        <DataGridCheckBoxColumn Header="需管理员" Binding="{Binding RequiresAdministrator}" Width="85" IsReadOnly="True" />
-                        <DataGridTextColumn Header="说明" Binding="{Binding RiskDescription}" Width="*" IsReadOnly="True" />
-                    </DataGrid.Columns>
-                </DataGrid>
             </TabItem>
             <TabItem Header="性能优化">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -92,23 +76,7 @@
                         <TextBlock Text="对应“系统属性 → 高级 → 性能 → 视觉效果”的自定义配置：仅保留平滑屏幕字体边缘，关闭其他视觉效果。"
                                    TextWrapping="Wrap" Margin="0,8,0,16" Foreground="#526273" />
 
-                        <Border Background="#F7FAFC" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="16">
-                            <StackPanel>
-                                <TextBlock Text="将关闭的项目" FontWeight="SemiBold" Margin="0,0,0,8" />
-                                <TextBlock Text="• 窗口最小化、还原和工作区动画" Margin="0,3" />
-                                <TextBlock Text="• 菜单、工具提示、组合框的动画与淡入淡出" Margin="0,3" />
-                                <TextBlock Text="• 窗口、鼠标指针和桌面图标文字阴影" Margin="0,3" />
-                                <TextBlock Text="• 拖动时显示窗口内容、平滑滚动和半透明选择框" Margin="0,3" />
-                                <TextBlock Text="• 任务栏动画、Peek、缩略图和任务栏预览缓存" Margin="0,3" />
-                                <TextBlock Text="保留：平滑屏幕字体边缘" FontWeight="SemiBold" Foreground="#18794E" Margin="0,10,0,0" />
-                            </StackPanel>
-                        </Border>
-
-                        <TextBlock Text="{Binding VisualEffectsStatus}" Margin="0,14,0,12" Foreground="#526273" />
-                        <StackPanel Orientation="Horizontal">
-                            <Button Content="一键应用性能模式" Command="{Binding OptimizeVisualEffectsCommand}" MinWidth="150" />
-                            <Button Content="恢复修改前设置" Command="{Binding RestoreVisualEffectsCommand}" MinWidth="140" />
-                        </StackPanel>
+                        <Button Content="一键应用性能模式" Command="{Binding OptimizeVisualEffectsCommand}" MinWidth="150" HorizontalAlignment="Left" />
                         <TextBlock Text="仅修改当前 Windows 用户的视觉效果设置，不修改服务、驱动、电源计划或安全策略。部分效果在重新登录后完全生效。"
                                    TextWrapping="Wrap" Margin="0,14,0,0" Foreground="#8A5A13" />
                     </StackPanel>

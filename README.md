@@ -1,41 +1,28 @@
 # PcCare
 
-PcCare 是一个面向公司老旧 Windows 电脑的离线系统体检与安全清理工具。它不依赖服务端、不安装服务、不常驻、不上传数据，也不包含杀毒、系统精简或高风险“注册表加速”。
+PcCare 是一个面向公司老旧 Windows 电脑的离线系统体检与视觉效果优化工具。它不依赖服务端、不安装服务、不常驻、不上传数据，也不包含杀毒、文件清理、系统精简或高风险“注册表加速”。
 
-当前版本：`0.2.0`（第一阶段 MVP）
+当前版本：`0.3.0`
 
 ## 功能
 
-- Windows、CPU、内存、系统盘、磁盘介质、连续运行时间和待重启状态体检。
+- 体检 Windows、CPU、内存、系统盘、磁盘介质、连续运行时间和待重启状态。
 - 依据系统 Build 号区分 Windows 10/11，兼容企业版 LTSC 的注册表名称差异。
-- 扫描并预览超过 7 天的固定白名单临时文件。
-- 用户确认后重新扫描并执行清理；需要时通过 UAC 按需提权。
-- 一键应用视觉效果性能模式：仅保留字体平滑，关闭其他动画、淡入淡出、阴影、Peek和缩略图效果。
-- 应用视觉效果前自动保存当前用户配置，并支持一键恢复。
+- 一键应用视觉效果性能模式：仅保留字体平滑，关闭其他动画、淡入淡出、阴影、Peek 和缩略图效果。
 - 读取 HKCU/HKLM Run 和用户/公共启动目录，仅展示，不修改。
 - 导出完全离线的 HTML 与 JSON 报告。
-- 在程序目录不可写时，将报告保存到“文档/PcCare/Reports”。
-
-## 清理范围
-
-第一阶段只包含以下固定分类：
-
-1. 当前用户临时目录。
-2. Windows 临时目录。
-3. 当前用户 Windows 错误报告归档。
-4. 系统 Windows 错误报告归档。
-5. 缩略图缓存（默认不勾选）。
-
-每个候选文件必须同时满足：位于白名单根目录内、超过 7 天、不是重解析点、未被其他进程占用。
+- 程序目录不可写时，将报告保存到“文档/PcCare/Reports”。
 
 ## 明确不做
 
 - 不扫描或处理病毒。
+- 不扫描或删除任何文件，不提供“可清理项目”。
 - 不修改 Windows 服务、Windows Update、Defender、SysMain、搜索索引或遥测。
 - 不清理注册表、Prefetch、事件日志、浏览器资料。
 - 不访问桌面、文档、下载、收藏夹或网盘目录。
 - 不从网络下载或执行脚本，不自动更新。
-- 不提供任意命令、任意路径清理或静默批量模式。
+- 不禁用启动项，不提供任意命令或静默批量模式。
+- 性能优化不创建备份，也不提供恢复功能。
 
 详见 [安全设计](docs/SAFETY_DESIGN.md)。
 
@@ -53,49 +40,56 @@ dotnet build PcCare.sln -c Release
 dotnet test tests/PcCare.Core.Tests/PcCare.Core.Tests.csproj -c Release
 ```
 
-测试只使用随机创建的临时测试目录，不会扫描或清理开发电脑的真实临时目录。
+## 发布版本与体积
 
-## 发布单文件 EXE
+GitHub Actions 同时生成两个版本：
+
+| 版本 | 目标电脑要求 | 特点 |
+|---|---|---|
+| `PcCare-win-x64-offline` | 无需预装 .NET | 内含 .NET 10、WPF 和原生运行时，文件较大，可完全离线独立运行 |
+| `PcCare-win-x64-lite` | 已安装 .NET 10 Desktop Runtime x64 | 不内置运行时，文件明显更小 |
+
+完整离线版：
 
 ```powershell
 dotnet publish src/PcCare.App/PcCare.App.csproj `
-  -c Release `
-  -r win-x64 `
-  --self-contained true `
-  -p:PublishSingleFile=true `
-  -p:PublishTrimmed=false `
-  -o artifacts/publish
+  -c Release -r win-x64 --self-contained true `
+  -p:PublishSingleFile=true -p:PublishTrimmed=false `
+  -o artifacts/offline
 ```
 
-输出文件：`artifacts/publish/PcCare.exe`
+轻量版：
 
-自包含程序内置 .NET 运行时，不要求目标电脑预装 .NET。它不会自动获得后续 .NET 安全补丁，发布新版本时应同步升级 SDK 并重新构建。
+```powershell
+dotnet publish src/PcCare.App/PcCare.App.csproj `
+  -c Release -r win-x64 --self-contained false `
+  -p:PublishSingleFile=true -p:PublishTrimmed=false `
+  -o artifacts/lite
+```
+
+没有开启裁剪，因为 WPF 和反射相关代码不能在没有完整兼容验证时安全裁剪。完整离线版不会自动获得后续 .NET 安全补丁，发布新版本时应同步升级 SDK 并重新构建。
 
 ## 使用方法
 
-1. 运行 `PcCare.exe`，无需管理员权限即可开始只读体检。
-2. 检查“可清理项目”的文件数量、空间和风险说明。
-3. 勾选分类并点击“执行清理”。
-4. Windows 弹出 UAC 时确认授权；程序只把分类 ID 传给提权进程，提权进程会重新按内置白名单扫描。
-5. 点击“导出报告”生成 HTML 和 JSON 文件。
-6. 在“性能优化”页应用视觉效果性能模式；需要回退时点击“恢复修改前设置”。
+1. 运行 `PcCare.exe`，无需管理员权限。
+2. 点击“开始体检”查看系统信息和启动项。
+3. 点击“导出报告”生成 HTML 和 JSON 文件。
+4. 在“性能优化”页点击“一键应用性能模式”。该操作只修改当前 Windows 用户的视觉效果设置，不创建备份。
 
 ## 已知限制
 
 - 当前界面只提供简体中文。
-- 第一阶段不支持禁用或恢复启动项。
-- 不删除空目录。
-- 普通权限扫描 Windows 系统目录时，部分不可访问文件不会进入预览；提权清理仍会重新校验。
-- 文件扫描与删除之间存在很短的时间窗口；执行前会再次检查完整路径和重解析点，但无法替代基于 Windows 文件句柄的内核级防竞态方案。
+- 不支持禁用或恢复启动项。
 - 视觉效果优化只作用于当前用户；部分任务栏和资源管理器效果需要重新登录后完全生效。
-- Linux 开发环境不能构建 WPF；仓库使用 Windows GitHub Actions完成编译、测试和单文件发布。
+- 性能模式不创建备份，应用前请确认确实需要该设置。
+- Linux 开发环境不能构建 WPF；仓库使用 Windows GitHub Actions 完成编译、测试和发布。
 
 ## 项目结构
 
 ```text
-src/PcCare.App       WPF 界面、UAC 协调和提权清理入口
-src/PcCare.Core      清理模型、扫描器、执行器、路径安全和报告
-src/PcCare.Windows   Windows 信息、白名单目录和启动项读取
-tests                核心安全测试
+src/PcCare.App       WPF 界面和交互逻辑
+src/PcCare.Core      系统模型和离线报告
+src/PcCare.Windows   Windows 信息、视觉效果和启动项读取
+tests                核心测试
 docs                 参考项目、安全设计和验收标准
 ```

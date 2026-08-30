@@ -41,11 +41,7 @@ public sealed class ScanReport
 {
     public required SystemSnapshot System { get; init; }
 
-    public List<CleanupCategoryScanResult> CleanupCategories { get; init; } = [];
-
     public List<StartupEntry> StartupEntries { get; init; } = [];
 
-    public CleanupExecutionResult? LastCleanup { get; set; }
-
-    public string ApplicationVersion { get; init; } = "0.1.0";
+    public string ApplicationVersion { get; init; } = "0.3.0";
 }

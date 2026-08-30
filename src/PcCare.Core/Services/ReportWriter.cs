@@ -60,24 +60,6 @@ public sealed class ReportWriter
         AddRow(html, "待重启", report.System.RebootPending ? "是" : "否");
         html.AppendLine("</table>");
 
-        html.AppendLine("<h2>可清理项目</h2><table><thead><tr><th>分类</th><th class=\"num\">文件数</th><th class=\"num\">可释放空间</th><th>风险说明</th></tr></thead><tbody>");
-        foreach (CleanupCategoryScanResult category in report.CleanupCategories)
-        {
-            html.AppendLine($"<tr><td>{E(category.Rule.DisplayName)}</td><td class=\"num\">{category.Candidates.Count}</td><td class=\"num\">{E(FormatBytes(category.TotalBytes))}</td><td>{E(category.Rule.RiskDescription)}</td></tr>");
-        }
-
-        html.AppendLine("</tbody></table>");
-        if (report.LastCleanup is not null)
-        {
-            CleanupExecutionResult cleanup = report.LastCleanup;
-            html.AppendLine("<h2>最近清理结果</h2><table>");
-            AddRow(html, "成功删除", cleanup.DeletedCount.ToString(System.Globalization.CultureInfo.InvariantCulture));
-            AddRow(html, "失败", cleanup.FailedCount.ToString(System.Globalization.CultureInfo.InvariantCulture));
-            AddRow(html, "跳过", cleanup.SkippedCount.ToString(System.Globalization.CultureInfo.InvariantCulture));
-            AddRow(html, "实际释放", FormatBytes(cleanup.FreedBytes));
-            html.AppendLine("</table>");
-        }
-
         html.AppendLine("<h2>启动项（只读）</h2><table><thead><tr><th>名称</th><th>命令</th><th>来源</th><th>范围</th></tr></thead><tbody>");
         foreach (StartupEntry entry in report.StartupEntries)
         {

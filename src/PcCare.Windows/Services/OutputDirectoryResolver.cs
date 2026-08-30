@@ -18,22 +18,6 @@ public sealed class OutputDirectoryResolver
         return fallback;
     }
 
-    public string ResolveJobsDirectory()
-    {
-        string localApplicationData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        string jobs = Path.Combine(localApplicationData, "PcCare", "Jobs");
-        Directory.CreateDirectory(jobs);
-        return jobs;
-    }
-
-    public string ResolveBackupsDirectory()
-    {
-        string localApplicationData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        string backups = Path.Combine(localApplicationData, "PcCare", "Backups");
-        Directory.CreateDirectory(backups);
-        return backups;
-    }
-
     private static bool CanWrite(string directory)
     {
         try

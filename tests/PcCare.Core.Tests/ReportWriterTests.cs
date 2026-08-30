@@ -19,21 +19,6 @@ public sealed class ReportWriterTests
                 WindowsBuild = "26100",
                 CpuName = "Test CPU"
             },
-            CleanupCategories =
-            [
-                new CleanupCategoryScanResult
-                {
-                    Rule = new CleanupRule(
-                        "test",
-                        "临时文件",
-                        temporary.Path,
-                        "*",
-                        TimeSpan.FromDays(7),
-                        true,
-                        false,
-                        "安全清理")
-                }
-            ],
             StartupEntries = [new StartupEntry("A&B", "app.exe", "HKCU", "当前用户")]
         };
 

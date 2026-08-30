@@ -33,20 +33,37 @@ jobs:
       - name: Test
         run: dotnet test tests/PcCare.Core.Tests/PcCare.Core.Tests.csproj -c Release --no-build --logger "trx;LogFileName=tests.trx"
 
-      - name: Publish portable executable
-        run: dotnet publish src/PcCare.App/PcCare.App.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o artifacts/publish
+      - name: Publish full offline executable
+        run: dotnet publish src/PcCare.App/PcCare.App.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o artifacts/offline
 
-      - name: Create checksum
+      - name: Publish lightweight executable
+        run: dotnet publish src/PcCare.App/PcCare.App.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:PublishTrimmed=false -o artifacts/lite
+
+      - name: Create checksums and size summary
         shell: pwsh
         run: |
-          $hash = (Get-FileHash artifacts/publish/PcCare.exe -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$hash  PcCare.exe" | Set-Content artifacts/publish/PcCare.exe.sha256 -Encoding ascii
+          foreach ($edition in @("offline", "lite")) {
+            $exe = "artifacts/$edition/PcCare.exe"
+            $hash = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  PcCare.exe" | Set-Content "artifacts/$edition/PcCare.exe.sha256" -Encoding ascii
+            $size = (Get-Item $exe).Length
+            "- ${edition}: $size bytes" | Add-Content $env:GITHUB_STEP_SUMMARY
+          }
 
-      - name: Upload executable
+      - name: Upload full offline executable
         uses: actions/upload-artifact@v4
         with:
-          name: PcCare-win-x64
+          name: PcCare-win-x64-offline
           path: |
-            artifacts/publish/PcCare.exe
-            artifacts/publish/PcCare.exe.sha256
+            artifacts/offline/PcCare.exe
+            artifacts/offline/PcCare.exe.sha256
+          if-no-files-found: error
+
+      - name: Upload lightweight executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: PcCare-win-x64-lite
+          path: |
+            artifacts/lite/PcCare.exe
+            artifacts/lite/PcCare.exe.sha256
           if-no-files-found: error
