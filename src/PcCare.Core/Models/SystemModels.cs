@@ -31,17 +31,13 @@ public sealed class SystemSnapshot
     public DateTimeOffset CapturedAtUtc { get; init; } = DateTimeOffset.UtcNow;
 }
 
-public sealed record StartupEntry(
-    string Name,
-    string Command,
-    string Source,
-    string Scope);
-
 public sealed class ScanReport
 {
     public required SystemSnapshot System { get; init; }
 
-    public List<StartupEntry> StartupEntries { get; init; } = [];
+    public List<StartupItem> StartupItems { get; init; } = [];
 
-    public string ApplicationVersion { get; init; } = "0.3.0";
+    public List<StartupOperationLogEntry> StartupOperationLog { get; init; } = [];
+
+    public string ApplicationVersion { get; init; } = "0.4.0";
 }

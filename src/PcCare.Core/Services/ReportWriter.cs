@@ -60,10 +60,16 @@ public sealed class ReportWriter
         AddRow(html, "待重启", report.System.RebootPending ? "是" : "否");
         html.AppendLine("</table>");
 
-        html.AppendLine("<h2>启动项（只读）</h2><table><thead><tr><th>名称</th><th>命令</th><th>来源</th><th>范围</th></tr></thead><tbody>");
-        foreach (StartupEntry entry in report.StartupEntries)
+        html.AppendLine("<h2>启动项</h2><table><thead><tr><th>名称</th><th>命令</th><th>来源</th><th>范围</th><th>状态</th><th>建议</th><th>风险</th><th>原因</th></tr></thead><tbody>");
+        foreach (StartupItem item in report.StartupItems)
         {
-            html.AppendLine($"<tr><td>{E(entry.Name)}</td><td>{E(entry.Command)}</td><td>{E(entry.Source)}</td><td>{E(entry.Scope)}</td></tr>");
+            html.AppendLine($"<tr><td>{E(item.Name)}</td><td>{E(item.Command)}</td><td>{E(item.SourcePath)}</td><td>{E(item.Scope.ToString())}</td><td>{(item.Enabled ? "已启用" : "已禁用")}</td><td>{E(item.Recommendation.ToString())}</td><td>{E(item.RiskLevel.ToString())}</td><td>{E(item.Reason)}</td></tr>");
+        }
+
+        html.AppendLine("</tbody></table><h2>启动项操作记录</h2><table><thead><tr><th>时间（UTC）</th><th>项目</th><th>来源</th><th>操作</th><th>旧状态</th><th>新状态</th><th>结果</th><th>说明</th></tr></thead><tbody>");
+        foreach (StartupOperationLogEntry entry in report.StartupOperationLog)
+        {
+            html.AppendLine($"<tr><td>{E(entry.TimeUtc.ToString("O", System.Globalization.CultureInfo.InvariantCulture))}</td><td>{E(entry.ItemName)}</td><td>{E(entry.SourceType.ToString())}</td><td>{E(entry.Action.ToString())}</td><td>{(entry.PreviousEnabled ? "已启用" : "已禁用")}</td><td>{(entry.CurrentEnabled ? "已启用" : "已禁用")}</td><td>{(entry.Succeeded ? "成功" : "失败")}</td><td>{E(entry.Message)}</td></tr>");
         }
 
         html.AppendLine("</tbody></table><p class=\"meta\">本报告完全离线生成，不包含远程资源。</p></body></html>");

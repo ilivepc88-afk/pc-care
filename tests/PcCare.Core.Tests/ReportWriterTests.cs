@@ -19,7 +19,22 @@ public sealed class ReportWriterTests
                 WindowsBuild = "26100",
                 CpuName = "Test CPU"
             },
-            StartupEntries = [new StartupEntry("A&B", "app.exe", "HKCU", "当前用户")]
+            StartupItems =
+            [
+                new StartupItem
+                {
+                    Id = "startup-1",
+                    Name = "A&B",
+                    SourceType = StartupSourceType.RegistryRun,
+                    SourcePath = "HKCU\\Software\\Run",
+                    Command = "app.exe",
+                    Scope = StartupScope.CurrentUser,
+                    Enabled = true,
+                    Recommendation = StartupRecommendation.Unknown,
+                    RiskLevel = StartupRiskLevel.Medium,
+                    Reason = "无法可靠判断用途。"
+                }
+            ]
         };
 
         (string htmlPath, string jsonPath) = await new ReportWriter().WriteAsync(report, temporary.Path);

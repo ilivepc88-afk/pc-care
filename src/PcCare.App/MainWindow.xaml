@@ -24,7 +24,7 @@
             </Grid.ColumnDefinitions>
             <StackPanel>
                 <TextBlock Text="PcCare 系统优化工具" FontSize="26" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" />
-                <TextBlock Text="离线体检 · 启动项只读 · 本地报告 · 性能优化" Foreground="#607080" Margin="0,4,0,0" />
+                <TextBlock Text="离线体检 · 安全启动项管理 · 本地报告 · 性能优化" Foreground="#607080" Margin="0,4,0,0" />
             </StackPanel>
             <Border Grid.Column="1" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Background="White" CornerRadius="4" Padding="12,8">
                 <TextBlock Text="{Binding AdministratorText}" />
@@ -82,15 +82,81 @@
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
-            <TabItem Header="启动项（只读）">
-                <DataGrid ItemsSource="{Binding StartupEntries}" Margin="12">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="180" />
-                        <DataGridTextColumn Header="命令/路径" Binding="{Binding Command}" Width="*" />
-                        <DataGridTextColumn Header="来源" Binding="{Binding Source}" Width="130" />
-                        <DataGridTextColumn Header="范围" Binding="{Binding Scope}" Width="90" />
-                    </DataGrid.Columns>
-                </DataGrid>
+            <TabItem Header="启动项优化">
+                <Grid Margin="14">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="安全启动项优化" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" />
+                            <TextBlock Text="只识别登录和开机入口；未知、系统、安全、驱动和企业管理项不会加入一键优化。" Foreground="#526273" Margin="0,5,0,0" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Content="扫描启动项" Command="{Binding ScanStartupCommand}" />
+                            <Button Content="一键优化低风险项" Command="{Binding OptimizeStartupCommand}" />
+                        </StackPanel>
+                    </Grid>
+
+                    <StackPanel Grid.Row="1" Margin="0,0,0,12">
+                        <WrapPanel Margin="0,0,0,8">
+                            <Border Background="#EEF5FB" CornerRadius="3" Padding="10,5" Margin="0,0,8,0"><TextBlock Text="{Binding StartupItemCountText}" /></Border>
+                            <Border Background="#EEF5FB" CornerRadius="3" Padding="10,5" Margin="0,0,8,0"><TextBlock Text="{Binding EnabledStartupItemCountText}" /></Border>
+                            <Border Background="#EAF7EF" CornerRadius="3" Padding="10,5" Margin="0,0,8,0"><TextBlock Text="{Binding RecommendDisableCountText}" /></Border>
+                            <Border Background="#FFF4E5" CornerRadius="3" Padding="10,5"><TextBlock Text="{Binding ProtectedStartupItemCountText}" /></Border>
+                        </WrapPanel>
+                        <WrapPanel VerticalAlignment="Center">
+                            <TextBlock Text="筛选" VerticalAlignment="Center" Margin="0,0,6,0" />
+                            <ComboBox ItemsSource="{Binding StartupFilters}" SelectedItem="{Binding StartupFilter}" Width="116" Margin="0,0,12,0" />
+                            <TextBlock Text="搜索" VerticalAlignment="Center" Margin="0,0,6,0" />
+                            <TextBox Text="{Binding StartupSearchText, UpdateSourceTrigger=PropertyChanged}" Width="220" Margin="0,0,14,0" />
+                            <CheckBox Content="显示 Microsoft Windows 系统计划任务（只读）" IsChecked="{Binding ShowMicrosoftSystemTasks}" VerticalAlignment="Center" />
+                        </WrapPanel>
+                    </StackPanel>
+
+                    <DataGrid Grid.Row="2" ItemsSource="{Binding StartupItemsView}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="150" />
+                            <DataGridTextColumn Header="来源" Binding="{Binding SourceType}" Width="105" />
+                            <DataGridTextColumn Header="范围" Binding="{Binding Scope}" Width="85" />
+                            <DataGridTextColumn Header="状态" Binding="{Binding Enabled}" Width="65" />
+                            <DataGridTextColumn Header="建议" Binding="{Binding Recommendation}" Width="105" />
+                            <DataGridTextColumn Header="风险" Binding="{Binding RiskLevel}" Width="65" />
+                            <DataGridTextColumn Header="发布者" Binding="{Binding Publisher}" Width="130" />
+                            <DataGridTextColumn Header="任务作者" Binding="{Binding User}" Width="120" />
+                            <DataGridTextColumn Header="位置" Binding="{Binding SourcePath}" Width="220" />
+                            <DataGridTextColumn Header="动作类型" Binding="{Binding ActionType}" Width="95" />
+                            <DataGridTextColumn Header="命令/路径" Binding="{Binding Command}" Width="260" />
+                            <DataGridTextColumn Header="原因" Binding="{Binding Reason}" Width="250" />
+                            <DataGridTemplateColumn Header="操作" Width="95">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Command="{Binding DataContext.ToggleStartupItemCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
+                                                CommandParameter="{Binding}">
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Content" Value="启用" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Enabled}" Value="True">
+                                                            <Setter Property="Content" Value="禁用" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
             </TabItem>
         </TabControl>
 
