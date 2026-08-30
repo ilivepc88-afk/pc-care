@@ -46,7 +46,7 @@ internal sealed class StartupItemMetadataReader
         try
         {
 #pragma warning disable SYSLIB0057
-            using X509Certificate2 certificate = X509Certificate2.CreateFromSignedFile(path);
+            using X509Certificate certificate = X509Certificate.CreateFromSignedFile(path);
 #pragma warning restore SYSLIB0057
             return string.IsNullOrWhiteSpace(certificate.Subject)
                 ? DigitalSignatureStatus.Unknown

@@ -3,6 +3,7 @@ using System.Security;
 using System.Security.Cryptography;
 using System.Text;
 using PcCare.Core.Models;
+using PcCare.Core.Services;
 
 namespace PcCare.Windows.Services;
 
@@ -101,7 +102,7 @@ internal sealed class ScheduledTaskStartupScanner
                 return;
             }
 
-            (string executable, string arguments, string actionType) = GetExecutable(definition);
+            (string executable, string arguments, string actionType) = GetExecutable((object)definition);
             dynamic registration = definition.RegistrationInfo;
             string author = registration.Author?.ToString() ?? string.Empty;
             string description = registration.Description?.ToString() ?? string.Empty;
