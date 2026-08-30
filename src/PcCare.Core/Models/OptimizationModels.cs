@@ -100,15 +100,3 @@ public sealed record OptimizationOperationResult(
     OptimizationAction Action,
     bool Succeeded,
     string Message);
-
-public sealed record BackgroundOptimizationLogEntry(
-    DateTimeOffset TimeUtc,
-    string ItemId,
-    string ItemName,
-    OptimizationState PreviousState,
-    OptimizationState CurrentState,
-    string RegistryPath,
-    string RegistryName,
-    OptimizationAction Action,
-    bool Succeeded,
-    string Message);

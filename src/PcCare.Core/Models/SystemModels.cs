@@ -30,18 +30,3 @@ public sealed class SystemSnapshot
 
     public DateTimeOffset CapturedAtUtc { get; init; } = DateTimeOffset.UtcNow;
 }
-
-public sealed class ScanReport
-{
-    public required SystemSnapshot System { get; init; }
-
-    public List<StartupItem> StartupItems { get; init; } = [];
-
-    public List<StartupOperationLogEntry> StartupOperationLog { get; init; } = [];
-
-    public List<OptimizationItem> BackgroundOptimizationItems { get; init; } = [];
-
-    public List<BackgroundOptimizationLogEntry> BackgroundOptimizationLog { get; init; } = [];
-
-    public string ApplicationVersion { get; init; } = "0.5.0";
-}

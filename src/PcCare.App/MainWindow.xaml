@@ -24,7 +24,7 @@
             </Grid.ColumnDefinitions>
             <StackPanel>
                 <TextBlock Text="PcCare 系统优化工具" FontSize="26" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" />
-                <TextBlock Text="离线体检 · 安全启动项管理 · 后台优化 · 本地报告 · 性能优化" Foreground="#607080" Margin="0,4,0,0" />
+                <TextBlock Text="离线检查 · 安全启动项管理 · 后台优化 · 性能优化" Foreground="#607080" Margin="0,4,0,0" />
             </StackPanel>
             <Border Grid.Column="1" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Background="White" CornerRadius="4" Padding="12,8">
                 <TextBlock Text="{Binding AdministratorText}" />
@@ -44,9 +44,8 @@
         </UniformGrid>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,12">
-            <Button Content="开始体检" Command="{Binding ScanCommand}" IsDefault="True" />
-            <Button Content="停止扫描" Command="{Binding CancelCommand}" />
-            <Button Content="导出报告" Command="{Binding ExportCommand}" />
+            <Button Content="开始检查" Command="{Binding ScanCommand}" IsDefault="True" />
+            <Button Content="停止检查" Command="{Binding CancelCommand}" />
         </StackPanel>
 
         <TabControl Grid.Row="3" Background="White" BorderBrush="{StaticResource BorderBrush}">
@@ -65,20 +64,29 @@
                         <TextBlock Grid.Row="4" Text="磁盘介质" FontWeight="SemiBold" Margin="0,12,0,0" /><TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding DiskMediaType}" Margin="0,12,0,0" />
                         <TextBlock Grid.Row="5" Text="连续运行" FontWeight="SemiBold" Margin="0,12,0,0" /><TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding UptimeSummary}" Margin="0,12,0,0" />
                         <TextBlock Grid.Row="6" Text="待重启" FontWeight="SemiBold" Margin="0,12,0,0" /><TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding RebootPendingText}" Margin="0,12,0,0" />
-                        <TextBlock Grid.Row="7" Text="说明" FontWeight="SemiBold" Margin="0,12,0,0" /><TextBlock Grid.Row="7" Grid.Column="1" Text="提供系统体检、保守启动项和后台优化、视觉效果性能优化；不修改服务、更新、安全软件或用户文件。" TextWrapping="Wrap" Margin="0,12,0,0" />
+                        <TextBlock Grid.Row="7" Text="说明" FontWeight="SemiBold" Margin="0,12,0,0" /><TextBlock Grid.Row="7" Grid.Column="1" Text="提供系统检查、保守启动项和后台优化、视觉效果性能优化；不修改服务、更新、安全软件或用户文件。" TextWrapping="Wrap" Margin="0,12,0,0" />
                     </Grid>
                 </ScrollViewer>
             </TabItem>
             <TabItem Header="性能优化">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel Margin="20" MaxWidth="760" HorizontalAlignment="Left">
+                    <StackPanel Margin="20" MaxWidth="860" HorizontalAlignment="Left">
                         <TextBlock Text="视觉效果性能模式" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}" />
-                        <TextBlock Text="对应“系统属性 → 高级 → 性能 → 视觉效果”的自定义配置：仅保留平滑屏幕字体边缘，关闭其他视觉效果。"
-                                   TextWrapping="Wrap" Margin="0,8,0,16" Foreground="#526273" />
-
-                        <Button Content="一键应用性能模式" Command="{Binding OptimizeVisualEffectsCommand}" MinWidth="150" HorizontalAlignment="Left" />
-                        <TextBlock Text="仅修改当前 Windows 用户的视觉效果设置，不修改服务、驱动、电源计划或安全策略。部分效果在重新登录后完全生效。"
-                                   TextWrapping="Wrap" Margin="0,14,0,0" Foreground="#8A5A13" />
+                        <TextBlock Text="请先执行“开始检查”。下表显示当前用户在“系统属性 → 高级 → 性能 → 视觉效果”中的实际读取结果。"
+                                   TextWrapping="Wrap" Margin="0,8,0,12" Foreground="#526273" />
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" Content="应用性能模式" Command="{Binding OptimizeVisualEffectsCommand}" MinWidth="140" VerticalAlignment="Top" />
+                            <TextBlock Grid.Column="1" Text="仅修改当前 Windows 用户的视觉效果设置；保留字体平滑，其余视觉效果关闭。应用后会重新读取并刷新下表。"
+                                       TextWrapping="Wrap" Margin="14,4,0,0" Foreground="#8A5A13" />
+                        </Grid>
+                        <DataGrid ItemsSource="{Binding VisualEffectSettings}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" MinHeight="300">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="设置项" Binding="{Binding Name}" Width="230" />
+                                <DataGridTextColumn Header="当前配置" Binding="{Binding CurrentValue}" Width="180" />
+                                <DataGridTextColumn Header="性能模式建议" Binding="{Binding RecommendedValue}" Width="180" />
+                            </DataGrid.Columns>
+                        </DataGrid>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
@@ -122,14 +130,6 @@
 
                     <DataGrid Grid.Row="2" ItemsSource="{Binding BackgroundOptimizationItemsView}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="160" />
-                            <DataGridTextColumn Header="分类" Binding="{Binding Category}" Width="125" />
-                            <DataGridTextColumn Header="当前状态" Binding="{Binding CurrentState}" Width="115" />
-                            <DataGridTextColumn Header="建议" Binding="{Binding Recommendation}" Width="100" />
-                            <DataGridTextColumn Header="风险" Binding="{Binding RiskLevel}" Width="70" />
-                            <DataGridTextColumn Header="注册表位置" Binding="{Binding RegistryPath}" Width="260" />
-                            <DataGridTextColumn Header="原因" Binding="{Binding Reason}" Width="260" />
-                            <DataGridTextColumn Header="影响说明" Binding="{Binding Impact}" Width="260" />
                             <DataGridTemplateColumn Header="操作" Width="100">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
@@ -149,6 +149,14 @@
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="160" />
+                            <DataGridTextColumn Header="分类" Binding="{Binding Category}" Width="125" />
+                            <DataGridTextColumn Header="当前状态" Binding="{Binding CurrentState}" Width="115" />
+                            <DataGridTextColumn Header="建议" Binding="{Binding Recommendation}" Width="100" />
+                            <DataGridTextColumn Header="风险" Binding="{Binding RiskLevel}" Width="70" />
+                            <DataGridTextColumn Header="注册表位置" Binding="{Binding RegistryPath}" Width="260" />
+                            <DataGridTextColumn Header="原因" Binding="{Binding Reason}" Width="260" />
+                            <DataGridTextColumn Header="影响说明" Binding="{Binding Impact}" Width="260" />
                         </DataGrid.Columns>
                     </DataGrid>
                 </Grid>
@@ -194,18 +202,6 @@
 
                     <DataGrid Grid.Row="2" ItemsSource="{Binding StartupItemsView}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="150" />
-                            <DataGridTextColumn Header="来源" Binding="{Binding SourceType}" Width="105" />
-                            <DataGridTextColumn Header="范围" Binding="{Binding Scope}" Width="85" />
-                            <DataGridTextColumn Header="状态" Binding="{Binding Enabled}" Width="65" />
-                            <DataGridTextColumn Header="建议" Binding="{Binding Recommendation}" Width="105" />
-                            <DataGridTextColumn Header="风险" Binding="{Binding RiskLevel}" Width="65" />
-                            <DataGridTextColumn Header="发布者" Binding="{Binding Publisher}" Width="130" />
-                            <DataGridTextColumn Header="任务作者" Binding="{Binding User}" Width="120" />
-                            <DataGridTextColumn Header="位置" Binding="{Binding SourcePath}" Width="220" />
-                            <DataGridTextColumn Header="动作类型" Binding="{Binding ActionType}" Width="95" />
-                            <DataGridTextColumn Header="命令/路径" Binding="{Binding Command}" Width="260" />
-                            <DataGridTextColumn Header="原因" Binding="{Binding Reason}" Width="250" />
                             <DataGridTemplateColumn Header="操作" Width="95">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
@@ -225,6 +221,18 @@
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="150" />
+                            <DataGridTextColumn Header="来源" Binding="{Binding SourceType}" Width="105" />
+                            <DataGridTextColumn Header="范围" Binding="{Binding Scope}" Width="85" />
+                            <DataGridTextColumn Header="状态" Binding="{Binding Enabled}" Width="65" />
+                            <DataGridTextColumn Header="建议" Binding="{Binding Recommendation}" Width="105" />
+                            <DataGridTextColumn Header="风险" Binding="{Binding RiskLevel}" Width="65" />
+                            <DataGridTextColumn Header="发布者" Binding="{Binding Publisher}" Width="130" />
+                            <DataGridTextColumn Header="任务作者" Binding="{Binding User}" Width="120" />
+                            <DataGridTextColumn Header="位置" Binding="{Binding SourcePath}" Width="220" />
+                            <DataGridTextColumn Header="动作类型" Binding="{Binding ActionType}" Width="95" />
+                            <DataGridTextColumn Header="命令/路径" Binding="{Binding Command}" Width="260" />
+                            <DataGridTextColumn Header="原因" Binding="{Binding Reason}" Width="250" />
                         </DataGrid.Columns>
                     </DataGrid>
                 </Grid>

@@ -4,7 +4,6 @@ using System.Windows.Data;
 using PcCare.App.Infrastructure;
 using PcCare.App.Services;
 using PcCare.Core.Models;
-using PcCare.Core.Services;
 using PcCare.Windows.Services;
 
 namespace PcCare.App.ViewModels;
@@ -16,14 +15,9 @@ public sealed class MainViewModel : ObservableObject
     private readonly ElevatedStartupOperationRunner _startupOperationRunner;
     private readonly BackgroundOptimizationService _backgroundOptimizationService;
     private readonly ElevatedBackgroundOptimizationRunner _backgroundOptimizationRunner;
-    private readonly ReportWriter _reportWriter;
-    private readonly OutputDirectoryResolver _outputDirectoryResolver;
     private readonly VisualEffectsService _visualEffectsService;
     private readonly IDialogService _dialogService;
-    private readonly List<StartupOperationLogEntry> _startupOperationLog = [];
-    private readonly List<BackgroundOptimizationLogEntry> _backgroundOptimizationLog = [];
     private CancellationTokenSource? _operationCancellation;
-    private ScanReport? _report;
     private SystemSnapshot? _system;
     private bool _isBusy;
     private bool _showMicrosoftSystemTasks;
@@ -31,7 +25,7 @@ public sealed class MainViewModel : ObservableObject
     private string _startupSearchText = string.Empty;
     private string _backgroundFilter = "全部";
     private string _backgroundSearchText = string.Empty;
-    private string _statusText = "准备就绪。点击“开始体检”进行离线扫描。";
+    private string _statusText = "准备就绪。点击“开始检查”读取本机状态。";
 
     public MainViewModel(
         SystemInfoService systemInfoService,
@@ -39,8 +33,6 @@ public sealed class MainViewModel : ObservableObject
         ElevatedStartupOperationRunner startupOperationRunner,
         BackgroundOptimizationService backgroundOptimizationService,
         ElevatedBackgroundOptimizationRunner backgroundOptimizationRunner,
-        ReportWriter reportWriter,
-        OutputDirectoryResolver outputDirectoryResolver,
         VisualEffectsService visualEffectsService,
         IDialogService dialogService)
     {
@@ -49,8 +41,6 @@ public sealed class MainViewModel : ObservableObject
         _startupOperationRunner = startupOperationRunner;
         _backgroundOptimizationService = backgroundOptimizationService;
         _backgroundOptimizationRunner = backgroundOptimizationRunner;
-        _reportWriter = reportWriter;
-        _outputDirectoryResolver = outputDirectoryResolver;
         _visualEffectsService = visualEffectsService;
         _dialogService = dialogService;
 
@@ -66,7 +56,6 @@ public sealed class MainViewModel : ObservableObject
         ScanBackgroundOptimizationCommand = new AsyncRelayCommand(ScanBackgroundOptimizationAsync, () => !IsBusy);
         OptimizeBackgroundCommand = new AsyncRelayCommand(OptimizeBackgroundAsync, () => !IsBusy);
         ToggleBackgroundOptimizationItemCommand = new AsyncParameterRelayCommand(ToggleBackgroundOptimizationItemAsync, CanToggleBackgroundOptimizationItem);
-        ExportCommand = new AsyncRelayCommand(ExportAsync, () => !IsBusy && _report is not null);
         OptimizeVisualEffectsCommand = new AsyncRelayCommand(OptimizeVisualEffectsAsync, () => !IsBusy);
         CancelCommand = new RelayCommand(Cancel, () => IsBusy);
     }
@@ -74,6 +63,8 @@ public sealed class MainViewModel : ObservableObject
     public ObservableCollection<StartupItem> StartupItems { get; } = [];
 
     public ObservableCollection<OptimizationItem> BackgroundOptimizationItems { get; } = [];
+
+    public ObservableCollection<VisualEffectSettingStatus> VisualEffectSettings { get; } = [];
 
     public ICollectionView StartupItemsView { get; }
 
@@ -96,8 +87,6 @@ public sealed class MainViewModel : ObservableObject
     public AsyncRelayCommand OptimizeBackgroundCommand { get; }
 
     public AsyncParameterRelayCommand ToggleBackgroundOptimizationItemCommand { get; }
-
-    public AsyncRelayCommand ExportCommand { get; }
 
     public AsyncRelayCommand OptimizeVisualEffectsCommand { get; }
 
@@ -207,60 +196,61 @@ public sealed class MainViewModel : ObservableObject
 
     public string UnsupportedBackgroundItemCountText => $"系统不支持 {UnsupportedBackgroundItemCount} 项";
 
-    public string ComputerName => _system?.ComputerName ?? "尚未体检";
+    public string ComputerName => _system?.ComputerName ?? "尚未检查";
 
-    public string WindowsSummary => _system is null ? "尚未体检" : $"{_system.WindowsEdition} {_system.WindowsVersion}";
+    public string WindowsSummary => _system is null ? "尚未检查" : $"{_system.WindowsEdition} {_system.WindowsVersion}";
 
-    public string WindowsDetails => _system is null ? "尚未体检" : $"{_system.WindowsEdition} {_system.WindowsVersion}，Build {_system.WindowsBuild}";
+    public string WindowsDetails => _system is null ? "尚未检查" : $"{_system.WindowsEdition} {_system.WindowsVersion}，Build {_system.WindowsBuild}";
 
-    public string CpuName => _system?.CpuName ?? "尚未体检";
+    public string CpuName => _system?.CpuName ?? "尚未检查";
 
     public string MemorySummary => _system is null
-        ? "尚未体检"
-        : $"{ReportWriter.FormatBytes((long)_system.AvailableMemoryBytes)} 可用 / {ReportWriter.FormatBytes((long)_system.TotalMemoryBytes)}";
+        ? "尚未检查"
+        : $"{FormatBytes((long)_system.AvailableMemoryBytes)} 可用 / {FormatBytes((long)_system.TotalMemoryBytes)}";
 
-    public string SystemDriveFree => _system is null ? "尚未体检" : ReportWriter.FormatBytes(_system.SystemDriveFreeBytes);
+    public string SystemDriveFree => _system is null ? "尚未检查" : FormatBytes(_system.SystemDriveFreeBytes);
 
     public string DriveSummary => _system is null
-        ? "尚未体检"
-        : $"{ReportWriter.FormatBytes(_system.SystemDriveFreeBytes)} 可用 / {ReportWriter.FormatBytes(_system.SystemDriveTotalBytes)}";
+        ? "尚未检查"
+        : $"{FormatBytes(_system.SystemDriveFreeBytes)} 可用 / {FormatBytes(_system.SystemDriveTotalBytes)}";
 
-    public string DiskMediaType => _system?.DiskMediaType ?? "尚未体检";
+    public string DiskMediaType => _system?.DiskMediaType ?? "尚未检查";
 
-    public string UptimeSummary => _system is null ? "尚未体检" : $"{_system.Uptime.Days}天 {_system.Uptime.Hours}小时";
+    public string UptimeSummary => _system is null ? "尚未检查" : $"{_system.Uptime.Days}天 {_system.Uptime.Hours}小时";
 
-    public string RebootPendingText => _system is null ? "尚未体检" : _system.RebootPending ? "是，建议安排重启" : "否";
+    public string RebootPendingText => _system is null ? "尚未检查" : _system.RebootPending ? "是，建议安排重启" : "否";
 
     public string AdministratorText => _system is null ? "权限：尚未检查" : _system.IsAdministrator ? "权限：管理员" : "权限：普通用户";
 
     private async Task ScanAsync()
     {
-        BeginOperation("正在进行离线体检和优化项扫描……");
+        BeginOperation("正在进行离线检查和优化项扫描……");
         try
         {
             CancellationToken token = _operationCancellation!.Token;
             Task<SystemSnapshot> systemTask = _systemInfoService.CaptureAsync(token);
             Task<List<StartupItem>> startupTask = _startupService.ScanAsync(ShowMicrosoftSystemTasks, token);
             Task<List<OptimizationItem>> backgroundTask = _backgroundOptimizationService.ScanAsync(token);
+            Task<List<VisualEffectSettingStatus>> visualEffectsTask = _visualEffectsService.ReadPerformanceProfileAsync(token);
 
-            await Task.WhenAll(systemTask, startupTask, backgroundTask);
+            await Task.WhenAll(systemTask, startupTask, backgroundTask, visualEffectsTask);
             _system = await systemTask;
             List<StartupItem> startupItems = await startupTask;
             List<OptimizationItem> backgroundItems = await backgroundTask;
             ReplaceStartupItems(startupItems);
             ReplaceBackgroundOptimizationItems(backgroundItems);
-            _report = CreateReport(startupItems, backgroundItems);
+            ReplaceVisualEffectSettings(await visualEffectsTask);
             NotifySystemProperties();
-            StatusText = $"体检完成：发现 {startupItems.Count} 个启动项。";
+            StatusText = $"检查完成：发现 {startupItems.Count} 个启动项，已读取视觉效果配置。";
         }
         catch (OperationCanceledException)
         {
-            StatusText = "体检已取消。";
+            StatusText = "检查已取消。";
         }
         catch (Exception exception)
         {
-            StatusText = "体检失败。";
-            _dialogService.ShowError(exception.Message, "体检失败");
+            StatusText = "检查失败。";
+            _dialogService.ShowError(exception.Message, "检查失败");
         }
         finally
         {
@@ -275,7 +265,6 @@ public sealed class MainViewModel : ObservableObject
         {
             List<StartupItem> items = await _startupService.ScanAsync(ShowMicrosoftSystemTasks, _operationCancellation!.Token);
             ReplaceStartupItems(items);
-            UpdateReportStartupItems(items);
             StatusText = $"启动项扫描完成：发现 {items.Count} 项。";
         }
         catch (OperationCanceledException)
@@ -321,7 +310,6 @@ public sealed class MainViewModel : ObservableObject
             {
                 _operationCancellation!.Token.ThrowIfCancellationRequested();
                 StartupOperationResult result = await _startupOperationRunner.ApplyAsync(item, _operationCancellation.Token);
-                AddOperationLog(item, result);
                 if (result.Succeeded)
                 {
                     succeeded++;
@@ -330,7 +318,6 @@ public sealed class MainViewModel : ObservableObject
 
             List<StartupItem> refreshed = await _startupService.ScanAsync(ShowMicrosoftSystemTasks, _operationCancellation!.Token);
             ReplaceStartupItems(refreshed);
-            UpdateReportStartupItems(refreshed);
             StatusText = $"一键优化完成：成功 {succeeded} 项，失败 {candidates.Count - succeeded} 项。";
         }
         catch (OperationCanceledException)
@@ -371,7 +358,6 @@ public sealed class MainViewModel : ObservableObject
         try
         {
             StartupOperationResult result = await _startupOperationRunner.ApplyAsync(item, _operationCancellation!.Token);
-            AddOperationLog(item, result);
             if (!result.Succeeded)
             {
                 StatusText = $"{actionText}失败：{result.Message}";
@@ -381,7 +367,6 @@ public sealed class MainViewModel : ObservableObject
 
             List<StartupItem> refreshed = await _startupService.ScanAsync(ShowMicrosoftSystemTasks, _operationCancellation.Token);
             ReplaceStartupItems(refreshed);
-            UpdateReportStartupItems(refreshed);
             StatusText = $"{actionText}完成：{item.Name}。";
         }
         catch (OperationCanceledException)
@@ -406,7 +391,6 @@ public sealed class MainViewModel : ObservableObject
         {
             List<OptimizationItem> items = await _backgroundOptimizationService.ScanAsync(_operationCancellation!.Token);
             ReplaceBackgroundOptimizationItems(items);
-            UpdateReportBackgroundOptimizationItems(items);
             StatusText = $"后台优化扫描完成：发现 {items.Count} 项。";
         }
         catch (OperationCanceledException)
@@ -451,7 +435,6 @@ public sealed class MainViewModel : ObservableObject
             {
                 _operationCancellation!.Token.ThrowIfCancellationRequested();
                 OptimizationOperationResult result = await _backgroundOptimizationRunner.ApplyAsync(item, _operationCancellation.Token);
-                AddBackgroundOptimizationLog(item, result);
                 if (result.Succeeded)
                 {
                     succeeded++;
@@ -460,7 +443,6 @@ public sealed class MainViewModel : ObservableObject
 
             List<OptimizationItem> refreshed = await _backgroundOptimizationService.ScanAsync(_operationCancellation!.Token);
             ReplaceBackgroundOptimizationItems(refreshed);
-            UpdateReportBackgroundOptimizationItems(refreshed);
             StatusText = $"后台优化完成：成功 {succeeded} 项，失败 {candidates.Count - succeeded} 项。{GetBackgroundCompletionHint(refreshed)}";
         }
         catch (OperationCanceledException)
@@ -499,7 +481,6 @@ public sealed class MainViewModel : ObservableObject
         try
         {
             OptimizationOperationResult result = await _backgroundOptimizationRunner.ApplyAsync(item, _operationCancellation!.Token);
-            AddBackgroundOptimizationLog(item, result);
             if (!result.Succeeded)
             {
                 StatusText = $"{actionText}失败：{result.Message}";
@@ -509,7 +490,6 @@ public sealed class MainViewModel : ObservableObject
 
             List<OptimizationItem> refreshed = await _backgroundOptimizationService.ScanAsync(_operationCancellation.Token);
             ReplaceBackgroundOptimizationItems(refreshed);
-            UpdateReportBackgroundOptimizationItems(refreshed);
             StatusText = $"{actionText}完成：{item.Name}。{GetBackgroundCompletionHint(refreshed)}";
         }
         catch (OperationCanceledException)
@@ -520,36 +500,6 @@ public sealed class MainViewModel : ObservableObject
         {
             StatusText = $"{actionText}失败。";
             _dialogService.ShowError(exception.Message, $"{actionText}失败");
-        }
-        finally
-        {
-            EndOperation();
-        }
-    }
-
-    private async Task ExportAsync()
-    {
-        if (_report is null)
-        {
-            return;
-        }
-
-        BeginOperation("正在生成离线报告……");
-        try
-        {
-            string outputDirectory = _outputDirectoryResolver.ResolveReportsDirectory();
-            (string htmlPath, string jsonPath) = await _reportWriter.WriteAsync(_report, outputDirectory, _operationCancellation!.Token);
-            StatusText = $"报告已保存：{htmlPath}";
-            _dialogService.ShowInfo($"HTML：{htmlPath}\nJSON：{jsonPath}", "报告已导出");
-        }
-        catch (OperationCanceledException)
-        {
-            StatusText = "导出已取消。";
-        }
-        catch (Exception exception)
-        {
-            StatusText = "报告导出失败。";
-            _dialogService.ShowError(exception.Message, "报告导出失败");
         }
         finally
         {
@@ -570,6 +520,8 @@ public sealed class MainViewModel : ObservableObject
         try
         {
             await _visualEffectsService.ApplyPerformanceProfileAsync(_operationCancellation!.Token);
+            List<VisualEffectSettingStatus> settings = await _visualEffectsService.ReadPerformanceProfileAsync(_operationCancellation.Token);
+            ReplaceVisualEffectSettings(settings);
             StatusText = "视觉效果性能模式已应用。";
             _dialogService.ShowInfo("调整完成。部分程序或任务栏效果可能在重新登录后完全生效。", "性能优化完成");
         }
@@ -695,66 +647,12 @@ public sealed class MainViewModel : ObservableObject
         ToggleBackgroundOptimizationItemCommand.RaiseCanExecuteChanged();
     }
 
-    private void AddOperationLog(StartupItem item, StartupOperationResult result)
+    private void ReplaceVisualEffectSettings(IEnumerable<VisualEffectSettingStatus> settings)
     {
-        bool currentEnabled = result.Action == StartupOperationAction.Enable;
-        _startupOperationLog.Add(new StartupOperationLogEntry(
-            DateTimeOffset.UtcNow,
-            item.Name,
-            item.SourceType,
-            result.Action,
-            item.Enabled,
-            result.Succeeded ? currentEnabled : item.Enabled,
-            result.Succeeded,
-            result.Message));
-    }
-
-    private void AddBackgroundOptimizationLog(OptimizationItem item, OptimizationOperationResult result)
-    {
-        OptimizationState currentState = result.Succeeded
-            ? result.Action == OptimizationAction.Apply ? OptimizationState.Disabled : OptimizationState.NotConfigured
-            : item.CurrentState;
-        _backgroundOptimizationLog.Add(new BackgroundOptimizationLogEntry(
-            DateTimeOffset.UtcNow,
-            item.Id,
-            item.Name,
-            item.CurrentState,
-            currentState,
-            item.RegistryPath,
-            item.RegistryName,
-            result.Action,
-            result.Succeeded,
-            result.Message));
-    }
-
-    private ScanReport CreateReport(IReadOnlyCollection<StartupItem> startupItems, IReadOnlyCollection<OptimizationItem>? backgroundItems = null)
-    {
-        return new ScanReport
+        VisualEffectSettings.Clear();
+        foreach (VisualEffectSettingStatus setting in settings)
         {
-            System = _system ?? throw new InvalidOperationException("系统信息尚未获取。"),
-            StartupItems = startupItems.ToList(),
-            StartupOperationLog = _startupOperationLog.ToList(),
-            BackgroundOptimizationItems = (backgroundItems ?? BackgroundOptimizationItems).ToList(),
-            BackgroundOptimizationLog = _backgroundOptimizationLog.ToList(),
-            ApplicationVersion = typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "0.4.0"
-        };
-    }
-
-    private void UpdateReportStartupItems(IReadOnlyCollection<StartupItem> startupItems)
-    {
-        if (_system is not null)
-        {
-            _report = CreateReport(startupItems, BackgroundOptimizationItems);
-            ExportCommand.RaiseCanExecuteChanged();
-        }
-    }
-
-    private void UpdateReportBackgroundOptimizationItems(IReadOnlyCollection<OptimizationItem> backgroundItems)
-    {
-        if (_system is not null)
-        {
-            _report = CreateReport(StartupItems, backgroundItems);
-            ExportCommand.RaiseCanExecuteChanged();
+            VisualEffectSettings.Add(setting);
         }
     }
 
@@ -791,7 +689,6 @@ public sealed class MainViewModel : ObservableObject
         ScanBackgroundOptimizationCommand.RaiseCanExecuteChanged();
         OptimizeBackgroundCommand.RaiseCanExecuteChanged();
         ToggleBackgroundOptimizationItemCommand.RaiseCanExecuteChanged();
-        ExportCommand.RaiseCanExecuteChanged();
         OptimizeVisualEffectsCommand.RaiseCanExecuteChanged();
         CancelCommand.RaiseCanExecuteChanged();
     }
@@ -809,5 +706,24 @@ public sealed class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(UptimeSummary));
         OnPropertyChanged(nameof(RebootPendingText));
         OnPropertyChanged(nameof(AdministratorText));
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes < 0)
+        {
+            return "0 B";
+        }
+
+        string[] units = ["B", "KB", "MB", "GB", "TB"];
+        double value = bytes;
+        int unit = 0;
+        while (value >= 1024 && unit < units.Length - 1)
+        {
+            value /= 1024;
+            unit++;
+        }
+
+        return $"{value:0.##} {units[unit]}";
     }
 }

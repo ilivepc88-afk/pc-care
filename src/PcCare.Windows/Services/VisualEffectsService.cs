@@ -1,11 +1,16 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using Microsoft.Win32;
+using PcCare.Core.Models;
 
 namespace PcCare.Windows.Services;
 
 public sealed class VisualEffectsService
 {
+    private const uint SpiGetDragFullWindows = 0x0026;
+    private const uint SpiGetAnimation = 0x0048;
+    private const uint SpiGetFontSmoothing = 0x004A;
+    private const uint SpiGetUiEffects = 0x103E;
     private const uint SpiSetDragFullWindows = 0x0025;
     private const uint SpiSetAnimation = 0x0049;
     private const uint SpiSetFontSmoothing = 0x004B;
@@ -16,18 +21,18 @@ public sealed class VisualEffectsService
 
     private static readonly EffectParameter[] EffectParameters =
     [
-        new("工作区动画", 0x1043),
-        new("组合框动画", 0x1005),
-        new("鼠标指针阴影", 0x101B),
-        new("窗口阴影", 0x1025),
-        new("渐变标题栏", 0x1009),
-        new("热点跟踪", 0x100F),
-        new("列表框平滑滚动", 0x1007),
-        new("菜单动画", 0x1003),
-        new("菜单淡出", 0x1013),
-        new("选择淡出", 0x1015),
-        new("工具提示动画", 0x1017),
-        new("工具提示淡出", 0x1019)
+        new("工作区动画", 0x1043, 0x1042),
+        new("组合框动画", 0x1005, 0x1004),
+        new("鼠标指针阴影", 0x101B, 0x101A),
+        new("窗口阴影", 0x1025, 0x1024),
+        new("渐变标题栏", 0x1009, 0x1008),
+        new("热点跟踪", 0x100F, 0x100E),
+        new("列表框平滑滚动", 0x1007, 0x1006),
+        new("菜单动画", 0x1003, 0x1002),
+        new("菜单淡出", 0x1013, 0x1012),
+        new("选择淡出", 0x1015, 0x1014),
+        new("工具提示动画", 0x1017, 0x1016),
+        new("工具提示淡出", 0x1019, 0x1018)
     ];
 
     private static readonly RegistrySetting[] RegistrySettings =
@@ -46,6 +51,25 @@ public sealed class VisualEffectsService
     {
         cancellationToken.ThrowIfCancellationRequested();
         return Task.Run(ApplyPerformanceProfile, CancellationToken.None);
+    }
+
+    public Task<List<VisualEffectSettingStatus>> ReadPerformanceProfileAsync(CancellationToken cancellationToken = default) =>
+        Task.Run(ReadPerformanceProfile, cancellationToken);
+
+    private static List<VisualEffectSettingStatus> ReadPerformanceProfile()
+    {
+        var settings = new List<VisualEffectSettingStatus>
+        {
+            new("视觉效果预设", ReadVisualFxSetting(), "性能模式"),
+            new("平滑屏幕字体边缘", ReadBoolean(SpiGetFontSmoothing), "保留"),
+            new("最小化和还原动画", ReadAnimation(), "关闭"),
+            new("拖动时显示窗口内容", ReadBoolean(SpiGetDragFullWindows), "关闭"),
+            new("界面视觉效果", ReadBoolean(SpiGetUiEffects), "关闭")
+        };
+
+        settings.AddRange(EffectParameters.Select(effect =>
+            new VisualEffectSettingStatus(effect.Name, ReadBoolean(effect.GetAction), "关闭")));
+        return settings;
     }
 
     private static void ApplyPerformanceProfile()
@@ -71,6 +95,44 @@ public sealed class VisualEffectsService
             key.SetValue(setting.Name, setting.OptimizedValue, RegistryValueKind.DWord);
         }
     }
+
+    private static string ReadVisualFxSetting()
+    {
+        using RegistryKey? key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects", writable: false);
+        object? value = key?.GetValue("VisualFXSetting");
+        return value switch
+        {
+            int 3 => "性能模式",
+            int number => $"自定义（值 {number}）",
+            _ => "Windows 默认/未配置"
+        };
+    }
+
+    private static string ReadAnimation()
+    {
+        var information = AnimationInfo.Create();
+        return SystemParametersInfoAnimation(SpiGetAnimation, information.Size, ref information, 0)
+            ? ToStateText(information.MinimizeAnimation != 0)
+            : "无法读取";
+    }
+
+    private static string ReadBoolean(uint action)
+    {
+        IntPtr value = Marshal.AllocHGlobal(sizeof(int));
+        try
+        {
+            Marshal.WriteInt32(value, 0);
+            return SystemParametersInfoPointer(action, 0, value, 0)
+                ? ToStateText(Marshal.ReadInt32(value) != 0)
+                : "无法读取";
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(value);
+        }
+    }
+
+    private static string ToStateText(bool enabled) => enabled ? "已启用" : "已关闭";
 
     private static void SetAnimation(bool enabled)
     {
@@ -104,7 +166,7 @@ public sealed class VisualEffectsService
         throw new Win32Exception(error, $"无法调整系统参数：{settingName}。");
     }
 
-    private readonly record struct EffectParameter(string Name, uint SetAction);
+    private readonly record struct EffectParameter(string Name, uint SetAction, uint GetAction);
 
     private readonly record struct RegistrySetting(string SubKeyPath, string Name, int OptimizedValue);
 

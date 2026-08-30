@@ -120,18 +120,3 @@ public sealed record StartupOperationResult(
     StartupOperationAction Action,
     bool Succeeded,
     string Message);
-
-public sealed record StartupOperationLogEntry(
-    DateTimeOffset TimeUtc,
-    string ItemName,
-    StartupSourceType SourceType,
-    StartupOperationAction Action,
-    bool PreviousEnabled,
-    bool CurrentEnabled,
-    bool Succeeded,
-    string Message);
-
-public sealed record StartupOptimizationResult(
-    int Succeeded,
-    int Failed,
-    IReadOnlyList<StartupOperationResult> Items);

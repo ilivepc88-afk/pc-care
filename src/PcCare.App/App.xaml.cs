@@ -1,7 +1,6 @@
 using System.Windows;
 using PcCare.App.Services;
 using PcCare.App.ViewModels;
-using PcCare.Core.Services;
 using PcCare.Windows.Services;
 
 namespace PcCare.App;
@@ -26,7 +25,6 @@ public partial class App : Application
             return;
         }
 
-        var outputResolver = new OutputDirectoryResolver();
         var dialogService = new DialogService();
         var visualEffectsService = new VisualEffectsService();
         var viewModel = new MainViewModel(
@@ -35,8 +33,6 @@ public partial class App : Application
             new ElevatedStartupOperationRunner(new StartupManager()),
             new BackgroundOptimizationService(),
             new ElevatedBackgroundOptimizationRunner(new BackgroundOptimizationManager()),
-            new ReportWriter(),
-            outputResolver,
             visualEffectsService,
             dialogService);
 
