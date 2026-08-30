@@ -7,6 +7,8 @@ internal static class BackgroundOptimizationCatalog
 {
     private const string ContentDeliveryManager = @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager";
     private const string CloudContentPolicy = @"SOFTWARE\Policies\Microsoft\Windows\CloudContent";
+    private const string ExplorerAdvanced = @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced";
+    private const string SearchSettings = @"Software\Microsoft\Windows\CurrentVersion\SearchSettings";
 
     public static readonly IReadOnlyList<BackgroundOptimizationRule> Rules =
     [
@@ -41,6 +43,76 @@ internal static class BackgroundOptimizationCatalog
             false,
             true,
             detector => detector.WindowsBuild >= 19041),
+        new(
+            "windows.search-highlights",
+            "Windows 11 搜索要点",
+            OptimizationCategory.InterfaceExperience,
+            "关闭搜索框和搜索主页中的搜索要点内容。",
+            OptimizationRecommendation.Recommended,
+            "搜索要点会在任务栏搜索框和搜索主页展示动态内容建议。",
+            "不关闭 Windows Search 服务、索引或本地文件搜索；仅关闭搜索要点展示。",
+            [UserSearchSetting("IsDynamicSearchBoxEnabled")],
+            0,
+            false,
+            false,
+            true,
+            detector => detector.WindowsBuild >= 22000),
+        new(
+            "windows.taskbar-search",
+            "Windows 11 任务栏搜索",
+            OptimizationCategory.InterfaceExperience,
+            "隐藏 Windows 11 任务栏上的搜索框或搜索按钮。",
+            OptimizationRecommendation.Recommended,
+            "减少任务栏常驻入口；仍可通过开始菜单或 Win+S 使用搜索。",
+            "不关闭 Windows Search 服务、索引或本地文件搜索。",
+            [UserTaskbarSetting("SearchboxTaskbarMode")],
+            0,
+            false,
+            false,
+            true,
+            detector => detector.WindowsBuild >= 22000),
+        new(
+            "windows.taskbar-task-view",
+            "Windows 11 任务视图按钮",
+            OptimizationCategory.InterfaceExperience,
+            "隐藏 Windows 11 任务栏上的任务视图按钮。",
+            OptimizationRecommendation.Recommended,
+            "任务视图可通过 Win+Tab 继续使用，关闭任务栏按钮可减少界面入口。",
+            "不关闭虚拟桌面或窗口切换功能。",
+            [UserTaskbarSetting("ShowTaskViewButton")],
+            0,
+            false,
+            false,
+            true,
+            detector => detector.WindowsBuild >= 22000),
+        new(
+            "windows.taskbar-widgets-button",
+            "Windows 11 小组件任务栏按钮",
+            OptimizationCategory.InterfaceExperience,
+            "隐藏 Windows 11 任务栏上的小组件按钮。",
+            OptimizationRecommendation.Recommended,
+            "减少任务栏入口；如需同时禁用 Widgets 后台内容，可使用“Windows Widgets / News and interests”。",
+            "不卸载 Windows Web Experience Pack 或 WebView2。",
+            [UserTaskbarSetting("TaskbarDa")],
+            0,
+            false,
+            false,
+            true,
+            detector => detector.WindowsBuild >= 22000),
+        new(
+            "windows.taskbar-left-alignment",
+            "Windows 11 任务栏左对齐",
+            OptimizationCategory.InterfaceExperience,
+            "将 Windows 11 任务栏图标调整为左对齐。",
+            OptimizationRecommendation.Recommended,
+            "左对齐可减少旧版 Windows 用户切换时的界面差异。",
+            "仅调整当前用户的任务栏布局，不改变开始菜单、固定应用或通知区域。",
+            [UserTaskbarSetting("TaskbarAl")],
+            0,
+            false,
+            false,
+            true,
+            detector => detector.WindowsBuild >= 22000),
         new(
             "windows.consumer-experience",
             "Microsoft Consumer Experience",
@@ -171,12 +243,12 @@ internal static class BackgroundOptimizationCatalog
             detector => detector.WindowsBuild >= 17763),
         new(
             "windows.spotlight",
-            "Windows Spotlight 锁屏推荐",
+            "Windows 锁屏 Spotlight 与提示",
             OptimizationCategory.InterfaceExperience,
-            "关闭锁屏 Spotlight 推荐和相关提示内容。",
-            OptimizationRecommendation.Optional,
-            "锁屏 Spotlight 主要影响推荐内容，不是核心性能项。",
-            "性能收益有限；关闭后锁屏不再显示 Spotlight 推荐。",
+            "关闭锁屏 Spotlight 图片、推荐、提示和技巧内容，保留正常的锁屏与登录界面。",
+            OptimizationRecommendation.Recommended,
+            "锁屏 Spotlight 会展示动态图片、推荐内容、提示和技巧。",
+            "不跳过 Windows 锁屏，不设置或替换用户的锁屏图片；锁屏状态应用选择保持由用户在 Windows 设置中管理。",
             [PolicyUser(CloudContentPolicy, "DisableWindowsSpotlightFeatures")],
             1,
             true,
@@ -188,6 +260,10 @@ internal static class BackgroundOptimizationCatalog
     public static BackgroundOptimizationRule? Find(string id) => Rules.FirstOrDefault(rule => string.Equals(rule.Id, id, StringComparison.Ordinal));
 
     private static RegistryValueLocation UserSetting(string valueName) => new(RegistryHive.CurrentUser, ContentDeliveryManager, valueName);
+
+    private static RegistryValueLocation UserSearchSetting(string valueName) => new(RegistryHive.CurrentUser, SearchSettings, valueName);
+
+    private static RegistryValueLocation UserTaskbarSetting(string valueName) => new(RegistryHive.CurrentUser, ExplorerAdvanced, valueName);
 
     private static RegistryValueLocation PolicyMachine(string subKeyPath, string valueName) => new(RegistryHive.LocalMachine, subKeyPath, valueName);
 

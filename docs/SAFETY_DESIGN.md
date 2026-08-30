@@ -52,7 +52,8 @@ PcCare 提供离线检查、保守启动项优化、后台优化、当前用户�
 
 ## 后台优化边界
 
-- 只处理 Windows 提示/推荐、Consumer Experience、已检测功能的 Widgets/News and interests/Copilot、浏览器后台模式、个性化体验、广告 ID 和 Spotlight。
+- 只处理 Windows 提示/推荐、Windows 11 搜索要点、Windows 11 任务栏搜索/任务视图/小组件按钮/左对齐、Consumer Experience、已检测功能的 Widgets/News and interests/Copilot、浏览器后台模式、个性化体验、广告 ID 和 Spotlight。
+- Windows 11 任务栏调整只写入当前用户固定的 Explorer Advanced 值；不停止 Search 服务、不改索引、不删除 Widgets、不关闭虚拟桌面。锁屏调整只关闭 Spotlight 内容，不跳过锁屏或以 UI 自动化修改锁屏状态。
 - 所有可写项来自固定规则表。界面和 UAC 子进程仅传递规则 ID 与操作类型，不接收任意注册表路径、PowerShell 或命令。
 - 同名 HKCU/HKLM 策略值已存在且不是 PcCare 创建时，显示为“组织策略”并拒绝覆盖；Edge 与 Chrome 同样遵守此规则。
 - “恢复默认”仅删除 PcCare 创建且带本地所有权标记的值；不保留旧值、不创建备份、不创建还原点、不删除企业策略。

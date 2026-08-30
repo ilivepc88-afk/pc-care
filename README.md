@@ -4,14 +4,16 @@ PcCare 是一个面向公司老旧 Windows 电脑的离线系统检查与视觉�
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 
-当前版本：`0.6.0`
+当前开发版本：`0.6.1`（尚未发布）
 
 ## 功能
 
 - 检查 Windows、CPU、内存、系统盘、磁盘介质、连续运行时间和待重启状态；磁盘介质使用 Windows 原生只读存储查询，不引入 WMI 依赖。
 - 依据系统 Build 号区分 Windows 10/11，兼容企业版 LTSC 的注册表名称差异。
 - 一键应用视觉效果性能模式：仅保留字体平滑，关闭其他动画、淡入淡出、阴影、Peek 和缩略图效果。
-- 后台优化页按功能实际存在状态，保守关闭 Windows 提示/推荐、可用 Widgets/News and interests/Copilot、浏览器后台模式和少量个性化推荐；不卸载组件或浏览器。
+- 后台优化页按功能实际存在状态，保守关闭 Windows 提示/推荐、搜索要点、可用 Widgets/News and interests/Copilot、浏览器后台模式和少量个性化推荐；不卸载组件或浏览器。
+- Windows 11 可单项隐藏任务栏搜索、任务视图和小组件按钮，并调整任务栏为左对齐；不关闭 Search 服务、索引、虚拟桌面或卸载 Widgets。
+- 可关闭锁屏 Spotlight、推荐和提示，保留正常锁屏、登录和用户自行选择的锁屏图片/状态应用。
 - 安全扫描 HKCU/HKLM Run、RunOnce、WOW6432Node Run/RunOnce、用户/公共启动目录，以及登录/开机计划任务；默认隐藏 `\Microsoft\Windows\` 系统任务。
 - 显示启用状态、文件元数据、签名可用性、来源、风险和保守建议；未知项绝不加入一键优化。
 - 支持单项启用/禁用，以及仅对“低风险且建议优化”的项一键处理。注册表和启动文件夹仅写入任务管理器对应的状态层，不删除原值或文件；计划任务仅切换启用状态。
@@ -100,7 +102,7 @@ dotnet publish src/PcCare.App/PcCare.App.csproj `
 - `PcCare-vX.Y.Z-win-x64-offline.exe`：完整离线版。
 - `PcCare-vX.Y.Z-win-x64-lite.exe`：需预装 .NET 10 Desktop Runtime x64 的轻量版。
 
-示例：`git tag -a v0.6.0 -m "PcCare v0.6.0"`，然后执行 `git push origin v0.6.0`。
+示例：`git tag -a v0.6.1 -m "PcCare v0.6.1"`，然后执行 `git push origin v0.6.1`。
 
 发布前必须将 `src/PcCare.App/PcCare.App.csproj` 中的 `Version` 更新为与标签匹配的版本号；例如标签为 `v0.6.1`，版本必须为 `0.6.1`。
 

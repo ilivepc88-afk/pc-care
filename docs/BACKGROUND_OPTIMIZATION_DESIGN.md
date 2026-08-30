@@ -4,18 +4,20 @@
 
 本模块面向老旧 Windows 10、Windows 11 与 LTSC 电脑，减少推荐内容、浏览器关窗后的后台驻留和少量个性化推荐。它是离线本地工具，不执行脚本、不联网、不卸载组件，也不处理病毒。
 
-明确不在范围内：Windows Defender、防火墙、Windows Update、UAC、SmartScreen、BITS、SysMain、Windows Search、WMI、通知、剪贴板、最近文件/Jump List、全局 Background Apps、服务、AppX、Edge 或 WebView2 删除。
+明确不在范围内：Windows Defender、防火墙、Windows Update、UAC、SmartScreen、BITS、SysMain、Windows Search 服务与索引、WMI、通知、剪贴板、最近文件/Jump List、全局 Background Apps、服务、AppX、Edge 或 WebView2 删除。
 
 ## 实现规则
 
 | 优化项 | 注册表目标 | 条件 | 恢复默认 |
 |---|---|---|---|
 | Windows 使用建议 / 设置建议 | HKCU ContentDeliveryManager | Windows Build 支持 | 删除 PcCare 创建的值 |
+| Windows 11 搜索要点 | HKCU SearchSettings | Windows 11 Build 22000+ | 删除 PcCare 创建的值 |
+| Windows 11 任务栏搜索 / 任务视图 / 小组件按钮 / 左对齐 | HKCU Explorer Advanced | Windows 11 Build 22000+ | 删除 PcCare 创建的值 |
 | Consumer Experience | HKLM CloudContent 策略 | 企业/教育/专业版；LTSC 无该内容时显示已优化 | 删除 PcCare 创建的策略值 |
 | Windows Widgets | HKLM Dsh 策略 | 检测到 Web Experience Pack 或既有 Dsh 状态 | 删除 PcCare 创建的策略值 |
 | Windows 10 News and interests | HKLM Windows Feeds 策略 | Windows 10 且检测到 Feeds 状态 | 删除 PcCare 创建的策略值 |
 | Copilot | HKCU WindowsCopilot 策略 | 检测到 Copilot 包或既有策略 | 删除 PcCare 创建的策略值 |
-| 个性化体验 / Spotlight | HKCU CloudContent 策略 | Windows Build 支持 | 删除 PcCare 创建的策略值 |
+| 个性化体验 / 锁屏 Spotlight 与提示 | HKCU CloudContent 策略 | Windows Build 支持 | 删除 PcCare 创建的策略值 |
 | Edge / Chrome 后台模式 | HKLM 浏览器策略 | 通过 App Paths 检测浏览器 | 删除 PcCare 创建的策略值 |
 | 广告 ID | HKCU AdvertisingInfo | Windows Build 支持 | 删除 PcCare 创建的值 |
 
@@ -29,7 +31,9 @@ PcCare 的所有权标记只用于判断能否“恢复默认”，保存于 `HK
 
 ## 版本与功能检测
 
-规则不只依赖 Windows 10/11 名称：Widgets/Copilot 检查已安装 App 包或策略状态，Edge/Chrome 检查 32/64 位 `App Paths`，News and interests 限制为 Windows 10 Build 范围并检查 Feeds 状态。无法确认存在的功能显示“系统不支持”，不写入预期外的功能键。
+规则不只依赖 Windows 10/11 名称：Widgets/Copilot 检查已安装 App 包或策略状态，Edge/Chrome 检查 32/64 位 `App Paths`，News and interests 限制为 Windows 10 Build 范围并检查 Feeds 状态；搜索要点与任务栏布局限制为 Windows 11 Build 22000+。无法确认存在的功能显示“系统不支持”，不写入预期外的功能键。
+
+锁屏项只关闭 Spotlight 的动态图片、推荐、提示和技巧，不会跳过 Windows 锁屏、替换用户的图片，也不会用 UI 自动化强制修改“锁屏界面状态”为“无”。后者没有稳定、受支持的注册表/API 接口，保持由用户在 Windows 设置中选择。
 
 Windows 11 的“隐藏整个开始菜单推荐区”尚未加入本期。该类策略可能同时影响最近文件、最近添加应用或管理员既有布局，和本工具“不干扰办公最近文件/Jump List”的边界冲突；Consumer Experience 已覆盖明确的 Microsoft 消费推广内容。
 
@@ -39,4 +43,6 @@ Windows 11 的“隐藏整个开始菜单推荐区”尚未加入本期。该类
 - Microsoft Edge 策略目录：<https://learn.microsoft.com/en-us/deployedge/microsoft-edge-policies>
 - Chrome `BackgroundModeEnabled` 策略：<https://chromeenterprise.google/policies/background-mode-enabled/>
 - Windows Experience 策略 CSP：<https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience>
+- Windows 11 设置注册表参考（任务栏对齐、任务视图、小组件）：<https://learn.microsoft.com/en-us/windows/apps/develop/settings/settings-windows-11>
+- Windows Spotlight 配置：<https://learn.microsoft.com/en-us/windows/configuration/windows-spotlight/>
 - Sophia Script、Win11Debloat 和 winutil 仅用于比较功能边界；没有复制其脚本、备份、App 删除、服务调整或远程下载行为。
