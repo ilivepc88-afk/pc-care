@@ -3,12 +3,13 @@ name: Windows build
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
     branches: [main]
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-test-publish:
@@ -50,6 +51,15 @@ jobs:
             "- ${edition}: $size bytes" | Add-Content $env:GITHUB_STEP_SUMMARY
           }
 
+          if ("${{ github.ref }}" -like "refs/tags/v*") {
+            $tag = "${{ github.ref_name }}"
+            New-Item -ItemType Directory -Force -Path artifacts/release | Out-Null
+            Copy-Item artifacts/offline/PcCare.exe "artifacts/release/PcCare-$tag-win-x64-offline.exe"
+            Copy-Item artifacts/offline/PcCare.exe.sha256 "artifacts/release/PcCare-$tag-win-x64-offline.exe.sha256"
+            Copy-Item artifacts/lite/PcCare.exe "artifacts/release/PcCare-$tag-win-x64-lite.exe"
+            Copy-Item artifacts/lite/PcCare.exe.sha256 "artifacts/release/PcCare-$tag-win-x64-lite.exe.sha256"
+          }
+
       - name: Upload full offline executable
         uses: actions/upload-artifact@v4
         with:
@@ -67,3 +77,19 @@ jobs:
             artifacts/lite/PcCare.exe
             artifacts/lite/PcCare.exe.sha256
           if-no-files-found: error
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          body: |
+            ## PcCare Windows 发布包
+
+            - `offline`：完整离线版，无需预装 .NET 10 Desktop Runtime。
+            - `lite`：轻量版，需要预装 .NET 10 Desktop Runtime x64。
+            - 下载后请使用同名 `.sha256` 文件校验完整性。
+          files: |
+            artifacts/release/*.exe
+            artifacts/release/*.sha256

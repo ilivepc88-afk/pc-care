@@ -76,6 +76,15 @@ dotnet publish src/PcCare.App/PcCare.App.csproj `
 
 没有开启裁剪，因为 WPF 和反射相关代码不能在没有完整兼容验证时安全裁剪。完整离线版不会自动获得后续 .NET 安全补丁，发布新版本时应同步升级 SDK 并重新构建。
 
+## GitHub Release
+
+推送形如 `v0.6.0` 的版本标签后，GitHub Actions 会先完成构建和测试，再自动创建 Release，并上传两个带版本号的 EXE 与对应 SHA256 文件。
+
+- `PcCare-vX.Y.Z-win-x64-offline.exe`：完整离线版。
+- `PcCare-vX.Y.Z-win-x64-lite.exe`：需预装 .NET 10 Desktop Runtime x64 的轻量版。
+
+示例：`git tag -a v0.6.0 -m "PcCare v0.6.0"`，然后执行 `git push origin v0.6.0`。
+
 ## 使用方法
 
 1. 运行 `PcCare.exe`，默认无需管理员权限。
