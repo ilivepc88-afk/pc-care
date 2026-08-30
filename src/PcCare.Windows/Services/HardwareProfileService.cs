@@ -18,7 +18,7 @@ public sealed class HardwareProfileService
         (ulong totalMemory, ulong availableMemory) = ReadMemory();
         string cpuName = ReadRegistry(@"HARDWARE\DESCRIPTION\System\CentralProcessor\0", "ProcessorNameString")?.Trim() ?? "无法读取";
         string cpuVendor = ReadRegistry(@"HARDWARE\DESCRIPTION\System\CentralProcessor\0", "VendorIdentifier")?.Trim() ?? "无法读取";
-        int? cpuFrequency = ReadRegistryDword(@"HARDWARE\DESCRIPTION\System\CentralProcessor\0", "~MHz");
+        (int? cpuMaxFrequency, int? cpuCurrentFrequency) = ReadCpuFrequencies();
         string manufacturer = ReadRegistry(@"HARDWARE\DESCRIPTION\System\BIOS", "SystemManufacturer")?.Trim() ?? "无法读取";
         string model = ReadRegistry(@"HARDWARE\DESCRIPTION\System\BIOS", "SystemProductName")?.Trim() ?? "无法读取";
         bool isVirtualMachine = IsVirtualMachine(manufacturer, model, cpuName);
@@ -34,8 +34,8 @@ public sealed class HardwareProfileService
             CpuVendor = cpuVendor,
             CpuPhysicalCores = ReadPhysicalCoreCount(),
             CpuLogicalProcessors = Environment.ProcessorCount,
-            CpuMaxFrequencyMhz = cpuFrequency,
-            CpuCurrentFrequencyMhz = cpuFrequency,
+            CpuMaxFrequencyMhz = cpuMaxFrequency,
+            CpuCurrentFrequencyMhz = cpuCurrentFrequency,
             MemoryTotalBytes = totalMemory,
             MemoryAvailableBytes = availableMemory,
             SystemDrive = root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
@@ -290,6 +290,40 @@ public sealed class HardwareProfileService
     private static int? ReadRegistryDword(string path, string name) =>
         int.TryParse(ReadRegistry(path, name), out int value) ? value : null;
 
+    private static (int? MaxMhz, int? CurrentMhz) ReadCpuFrequencies()
+    {
+        int count = Math.Max(Environment.ProcessorCount, 1);
+        int itemSize = Marshal.SizeOf<ProcessorPowerInformation>();
+        IntPtr buffer = Marshal.AllocHGlobal(itemSize * count);
+        try
+        {
+            if (CallNtPowerInformation(PowerInformationLevel.ProcessorInformation, IntPtr.Zero, 0, buffer, (uint)(itemSize * count)) != 0)
+            {
+                int? nominal = ReadRegistryDword(@"HARDWARE\DESCRIPTION\System\CentralProcessor\0", "~MHz");
+                return (nominal, null);
+            }
+
+            int max = 0;
+            int current = 0;
+            for (int index = 0; index < count; index++)
+            {
+                var info = Marshal.PtrToStructure<ProcessorPowerInformation>(IntPtr.Add(buffer, index * itemSize));
+                max = Math.Max(max, (int)info.MaxMhz);
+                current = Math.Max(current, (int)info.CurrentMhz);
+            }
+
+            return (max > 0 ? max : null, current > 0 ? current : null);
+        }
+        catch (Exception exception) when (exception is UnauthorizedAccessException or IOException or ExternalException)
+        {
+            return (ReadRegistryDword(@"HARDWARE\DESCRIPTION\System\CentralProcessor\0", "~MHz"), null);
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(buffer);
+        }
+    }
+
     private static (ulong Total, ulong Available) ReadMemory()
     {
         var status = new MemoryStatusEx();
@@ -310,6 +344,7 @@ public sealed class HardwareProfileService
 
     private enum StorageBusType : byte { Unknown, Scsi, Atapi, Ata, Ieee1394, Ssa, Fibre, Usb, Raid, ISCSI, Sas, Sata, Sd, Mmc, Virtual, FileBackedVirtual, Spaces, Nvme }
     private enum LogicalProcessorRelationship { RelationProcessorCore = 0 }
+    private enum PowerInformationLevel { ProcessorInformation = 11 }
 
     [StructLayout(LayoutKind.Sequential)]
     private struct StoragePropertyQuery
@@ -336,6 +371,17 @@ public sealed class HardwareProfileService
 
     [StructLayout(LayoutKind.Sequential)]
     private struct ProcessorRelationshipHeader { public LogicalProcessorRelationship Relationship; public int Size; }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct ProcessorPowerInformation
+    {
+        public uint Number;
+        public uint MaxMhz;
+        public uint CurrentMhz;
+        public uint MhzLimit;
+        public uint MaxIdleState;
+        public uint CurrentIdleState;
+    }
 
     [StructLayout(LayoutKind.Sequential)]
     private sealed class MemoryStatusEx
@@ -373,6 +419,9 @@ public sealed class HardwareProfileService
     [DllImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GetLogicalProcessorInformationEx(LogicalProcessorRelationship relationshipType, IntPtr buffer, ref int returnedLength);
+
+    [DllImport("powrprof.dll")]
+    private static extern uint CallNtPowerInformation(PowerInformationLevel informationLevel, IntPtr inputBuffer, uint inputBufferLength, IntPtr outputBuffer, uint outputBufferLength);
 
     [DllImport("kernel32.dll", EntryPoint = "CreateFileW", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern SafeFileHandle CreateFile(string fileName, uint desiredAccess, uint shareMode, IntPtr securityAttributes, uint creationDisposition, uint flagsAndAttributes, IntPtr templateFile);

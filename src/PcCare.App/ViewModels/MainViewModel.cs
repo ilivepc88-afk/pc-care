@@ -244,7 +244,7 @@ public sealed class MainViewModel : ObservableObject
 
     public string AdministratorText => _system is null ? "权限：尚未检查" : _system.IsAdministrator ? "权限：管理员" : "权限：普通用户";
 
-    public string HardwareCpuText => _hardwarePower is null ? "请先检查" : $"{_hardwarePower.Hardware.CpuName}（{_hardwarePower.Hardware.CpuPhysicalCores} 核 / {_hardwarePower.Hardware.CpuLogicalProcessors} 线程）";
+    public string HardwareCpuText => _hardwarePower is null ? "请先检查" : $"{_hardwarePower.Hardware.CpuName}（{_hardwarePower.Hardware.CpuPhysicalCores} 核 / {_hardwarePower.Hardware.CpuLogicalProcessors} 线程；{FormatCpuFrequency(_hardwarePower.Hardware)}）";
 
     public string HardwareMemoryText => _hardwarePower is null ? "请先检查" : $"{FormatBytes((long)_hardwarePower.Hardware.MemoryAvailableBytes)} 可用 / {FormatBytes((long)_hardwarePower.Hardware.MemoryTotalBytes)}";
 
@@ -940,6 +940,13 @@ public sealed class MainViewModel : ObservableObject
 
         return $"{value:0.##} {units[unit]}";
     }
+
+    private static string FormatCpuFrequency(HardwareProfile hardware) => hardware.CpuMaxFrequencyMhz switch
+    {
+        null => "频率无法读取",
+        _ when hardware.CpuCurrentFrequencyMhz is null => $"最高 {hardware.CpuMaxFrequencyMhz} MHz",
+        _ => $"当前 {hardware.CpuCurrentFrequencyMhz} / 最高 {hardware.CpuMaxFrequencyMhz} MHz"
+    };
 
     private static string ToDisplayName(DeviceType value) => value switch
     {
